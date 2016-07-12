@@ -19,6 +19,23 @@
 //!     res.compile().unwrap();
 //! }
 //! ```
+//!
+//! # Defaults
+//! 
+//! We try to guess some sensible default values from Cargo's build time environement variables
+//! This is described in `WindowsResource::new()`. Further more we have to know there to find the
+//! resource compiler for the MSVC Toolkit this can be done by looking up a registry key but
+//! for MinGW this has to be done manually.
+//!
+//! The following paths are the hardcoded defaults:
+//!`C:\Program Files\mingw-w64\x86_64-5.3.0-win32-seh-rt_v4-rev0\mingw64\bin`
+//! and for MSVC `C:\Program Files (x86)\Windows Kits\10` and the registry keys at
+//! `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots`
+//!
+//! Note that the toolkit bitness as to match the one from the current Rust compiler. If you are using
+//! Rust GNU 64-bit you have to use MinGW64. For MSVC this is simpler as (recent) Windows SDK always installs
+//! both versions on a 64-bit system.
+
 use std::env;
 use std::path::{PathBuf, Path};
 use std::process;
@@ -28,7 +45,7 @@ use std::io::prelude::*;
 use std::fs;
 
 #[cfg(target_env = "msvc")]
-static TK_PATH: &'static str = "C:\\Program Files (x86)\\Windows Kits\\8.1";
+static TK_PATH: &'static str = "C:\\Program Files (x86)\\Windows Kits\\10";
 
 #[cfg(target_env = "gnu")]
 static TK_PATH: &'static str = "C:\\Program \
@@ -185,9 +202,8 @@ impl WindowsResource {
     /// `"C:\Program Files\mingw-w64\x86_64-5.3.0-win32-seh-rt_v4-rev0\mingw64\bin"`
     ///
     /// For MSVC the Windows SDK has to be installed. It comes with the resource compiler
-    /// `rc.exe` and the necessary header file `winver.h`. This should be set to the root
-    /// directory of the Windows SDK, e.g.,
-    /// `C:\Program Files (x86)\Windows Kits\8.1`
+    /// `rc.exe`. This should be set to the root directory of the Windows SDK, e.g.,
+    /// `"C:\Program Files (x86)\Windows Kits\10`
     pub fn set_toolkit_path<'a>(&mut self, path: &'a str) -> &mut Self {
         self.toolkit_path = path.to_string();
         self
@@ -212,9 +228,9 @@ impl WindowsResource {
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
-        try!(write!(f, "#include <winver.h>\n"));
+        //try!(write!(f, "#include <winver.h>\n"));
         try!(write!(f, "#pragma code_page(65001)\n"));
-        try!(write!(f, "VS_VERSION_INFO VERSIONINFO\n"));
+        try!(write!(f, "1 VERSIONINFO\n"));
         for (k, v) in self.version_info.iter() {
             match *k {
                 VersionInfo::FILEVERSION 
@@ -290,14 +306,14 @@ impl WindowsResource {
         } else {
             PathBuf::from(&self.toolkit_path).join("bin\\x86\\rc.exe")
         };
-        let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\um");
-        let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\shared");
+        //let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\um");
+        //let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\shared");
         let output = PathBuf::from(output_dir).join("resource.lib");
         let input = PathBuf::from(input);
         let status = try!(process::Command::new(rc_exe)
             .arg(format!("/I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
-            .arg(format!("/I{}", inc_shared.display()))
-            .arg(format!("/I{}", inc_win.display()))
+            //.arg(format!("/I{}", inc_shared.display()))
+            //.arg(format!("/I{}", inc_win.display()))
             .arg("/nologo")
             .arg(format!("/fo{}", output.display()))
             .arg(format!("{}", input.display()))
