@@ -21,20 +21,20 @@
 //! ```
 //!
 //! # Defaults
-//! 
+//!
 //! We try to guess some sensible default values from Cargo's build time environement variables
 //! This is described in `WindowsResource::new()`. Further more we have to know there to find the
 //! resource compiler for the MSVC Toolkit this can be done by looking up a registry key but
 //! for MinGW this has to be done manually.
 //!
 //! The following paths are the hardcoded defaults:
-//!`C:\Program Files\mingw-w64\x86_64-5.3.0-win32-seh-rt_v4-rev0\mingw64\bin`
-//! and for MSVC `C:\Program Files (x86)\Windows Kits\10` and the registry keys at
-//! `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots`
+//! MSVC the last registry key at
+//! `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots`, for MinGW we try our luck by simply
+//! using the `%PATH%` environment variable.
 //!
-//! Note that the toolkit bitness as to match the one from the current Rust compiler. If you are using
-//! Rust GNU 64-bit you have to use MinGW64. For MSVC this is simpler as (recent) Windows SDK always installs
-//! both versions on a 64-bit system.
+//! Note that the toolkit bitness as to match the one from the current Rust compiler. If you are
+//! using Rust GNU 64-bit you have to use MinGW64. For MSVC this is simpler as (recent) Windows
+//! SDK always installs both versions on a 64-bit system.
 
 use std::env;
 use std::path::{PathBuf, Path};
@@ -43,22 +43,13 @@ use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
 use std::fs;
-
-#[cfg(target_env = "msvc")]
-static TK_PATH: &'static str = "C:\\Program Files (x86)\\Windows Kits\\10";
-
-#[cfg(target_env = "gnu")]
-static TK_PATH: &'static str = "C:\\Program \
-                                Files\\mingw-w64\\x86_64-5.3.0-win32-seh-rt_v4-rev0\\mingw64\\bin";
+use std::error::Error;
 
 pub enum Toolkit {
     MSVC,
     GNU,
     Unknown,
 }
-
-// TODO detection
-// msvc: reg query "HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots" (KitsRoot10, KitsRoot81)
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
@@ -74,7 +65,7 @@ pub enum VersionInfo {
     PRODUCTVERSION,
     /// Targeted operating system
     ///
-    /// Should be Windows NT, with value `0x40000`
+    /// Should be Windows NT Win32, with value `0x40004`
     FILEOS,
     /// Type of the resulting binary
     ///
@@ -99,6 +90,7 @@ pub struct WindowsResource {
     version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
     icon: Option<String>,
+    language: u16
 }
 
 impl WindowsResource {
@@ -131,12 +123,14 @@ impl WindowsResource {
     /// |----------------------|------------------------------|
     /// | `FILEVERSION`        | `package.version`            |
     /// | `PRODUCTVERSION`     | `package.version`            |
-    /// | `FILEOS`             | `VOS_NT (0x40000)`           |
+    /// | `FILEOS`             | `VOS_NT_WINDOWS32 (0x40004)` |
     /// | `FILETYPE`           | `VFT_APP (0x1)`              |
     /// | `FILESUBTYPE`        | `VFT2_UNKNOWN (0x0)`         |
     /// | `FILEFLAGSMASK`      | `VS_FFI_FILEFLAGSMASK (0x3F)`|
     /// | `FILEFLAGS`          | `0x0`                        |
     ///
+    /// Additionally, the language is set to neutral (0),
+    /// and no icon is set.
     pub fn new() -> Self {
         let mut props: HashMap<String, String> = HashMap::new();
         let mut ver: HashMap<VersionInfo, u64> = HashMap::new();
@@ -154,21 +148,27 @@ impl WindowsResource {
         version |= env::var("CARGO_PKG_VERSION_MAJOR").unwrap().parse().unwrap_or(0) << 48;
         version |= env::var("CARGO_PKG_VERSION_MINOR").unwrap().parse().unwrap_or(0) << 32;
         version |= env::var("CARGO_PKG_VERSION_PATCH").unwrap().parse().unwrap_or(0) << 16;
-        //version |= env::var("CARGO_PKG_VERSION_PRE").unwrap().parse().unwrap_or(0);
+        // version |= env::var("CARGO_PKG_VERSION_PRE").unwrap().parse().unwrap_or(0);
         ver.insert(VersionInfo::FILEVERSION, version);
         ver.insert(VersionInfo::PRODUCTVERSION, version);
-        ver.insert(VersionInfo::FILEOS, 0x00040000);
+        ver.insert(VersionInfo::FILEOS, 0x00040004);
         ver.insert(VersionInfo::FILETYPE, 1);
         ver.insert(VersionInfo::FILESUBTYPE, 0);
         ver.insert(VersionInfo::FILEFLAGSMASK, 0x3F);
         ver.insert(VersionInfo::FILEFLAGS, 0);
 
+        let sdk = match get_sdk() {
+            Ok(mut v) => v.pop().unwrap(),
+            Err(_) => String::new(),
+        };
+
         WindowsResource {
-            toolkit_path: TK_PATH.to_string(),
+            toolkit_path: sdk,
             properties: props,
             version_info: ver,
             rc_file: None,
             icon: None,
+            language: 0,
         }
     }
 
@@ -185,6 +185,7 @@ impl WindowsResource {
     ///  - `"LeagalTrademark"`
     ///  - `"CompanyName"`
     ///  - `"Comments"`
+    ///  - `"InternalName"`
     ///
     /// Additionally there exists
     /// `"PrivateBuild"`, `"SpecialBuild"`
@@ -208,6 +209,34 @@ impl WindowsResource {
         self.toolkit_path = path.to_string();
         self
     }
+    
+    /// Set the user interface language of the file
+    ///
+    /// For possible values take a look at the MSDN page for resource files,
+    /// we only included some values here.
+    ///
+    /// | Language            | Value    |
+    /// |---------------------|----------|
+    /// | Neutral             | `0x0000` |
+    /// | English             | `0x0009` |
+    /// | English (US)        | `0x0409` |
+    /// | English (GB)        | `0x0809` |
+    /// | German              | `0x0407` |
+    /// | German (AT)         | `0x0c07` |
+    /// | French              | `0x000c` |
+    /// | French (FR)         | `0x040c` |
+    /// | Catalan             | `0x0003` |
+    /// | Basque              | `0x042d` |
+    /// | Breton              | `0x007e` |
+    /// | Scottish Gaelic     | `0x0091` |
+    /// | Romansch            | `0x0017` |
+    ///
+    /// I know that some of these languages are used less often, but
+    /// they were not included in many other lists.
+    pub fn set_language(&mut self, language: u16) -> &mut Self {
+        self.language = language;
+        self
+    }
 
     /// Set an icon filename
     ///
@@ -228,19 +257,26 @@ impl WindowsResource {
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
-        //try!(write!(f, "#include <winver.h>\n"));
+        // try!(write!(f, "#include <winver.h>\n"));
         try!(write!(f, "#pragma code_page(65001)\n"));
         try!(write!(f, "1 VERSIONINFO\n"));
         for (k, v) in self.version_info.iter() {
             match *k {
-                VersionInfo::FILEVERSION 
-                | VersionInfo::PRODUCTVERSION =>
-                    try!(write!(f, "{:?} {}, {}, {}, {}\n", k, (*v >> 48) as u16, (*v >> 32) as u16, (*v >> 16) as u16, *v as u16)),
-                _ => try!(write!(f, "{:?} {:#x}\n", k, v))
+                VersionInfo::FILEVERSION |
+                VersionInfo::PRODUCTVERSION => {
+                    try!(write!(f,
+                                "{:?} {}, {}, {}, {}\n",
+                                k,
+                                (*v >> 48) as u16,
+                                (*v >> 32) as u16,
+                                (*v >> 16) as u16,
+                                *v as u16))
+                }
+                _ => try!(write!(f, "{:?} {:#x}\n", k, v)),
             };
         }
         try!(write!(f, "{{\nBLOCK \"StringFileInfo\"\n"));
-        try!(write!(f, "{{\nBLOCK \"040904b0\"\n{{\n"));
+        try!(write!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{\n", self.language));
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
                 try!(write!(f, "VALUE \"{}\", \"{}\"\n", k, v));
@@ -249,11 +285,11 @@ impl WindowsResource {
         try!(write!(f, "}}\n}}\n"));
 
         try!(write!(f, "BLOCK \"VarFileInfo\" {{\n"));
-        try!(write!(f, "VALUE \"Translation\", 0x0409, 0x04b0\n"));
+        try!(write!(f, "VALUE \"Translation\", {:#x}, 0x04b0\n", self.language));
         try!(write!(f, "}}\n}}\n"));
         if self.icon.is_some() {
-			try!(write!(f, "1 ICON {}\n", self.icon.clone().unwrap()));
-		}
+            try!(write!(f, "1 ICON {}\n", self.icon.clone().unwrap()));
+        }
         Ok(())
     }
 
@@ -306,8 +342,8 @@ impl WindowsResource {
         } else {
             PathBuf::from(&self.toolkit_path).join("bin\\x86\\rc.exe")
         };
-        //let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\um");
-        //let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\shared");
+        // let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\um");
+        // let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\shared");
         let output = PathBuf::from(output_dir).join("resource.lib");
         let input = PathBuf::from(input);
         let status = try!(process::Command::new(rc_exe)
@@ -347,4 +383,25 @@ impl WindowsResource {
 
         Ok(())
     }
+}
+
+/// Find a Windows SDK
+fn get_sdk() -> Result<Vec<String>, io::Error> {
+    let output = try!(process::Command::new("reg")
+        .arg("query")
+        .arg("HKLM\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots")
+        .output());
+
+    let lines = try!(String::from_utf8(output.stdout)
+        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.description()))));
+    let mut kits: Vec<String> = Vec::new();
+    for line in lines.lines() {
+        if line.trim().starts_with("KitsRoot") {
+            kits.push(line.chars()
+                .skip(line.find("REG_SZ").unwrap() + 6)
+                .skip_while(|c| c.is_whitespace())
+                .collect());
+        }
+    }
+    Ok(kits)
 }
