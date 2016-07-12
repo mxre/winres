@@ -1,0 +1,8 @@
+[package]
+name = "winres"
+version = "0.1.0"
+authors = ["Max Resch <max.resch@student.tuwien.ac.at>"]
+
+[lib]
+path = "lib.rs"
+
