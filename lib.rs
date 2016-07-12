@@ -11,11 +11,13 @@
 //!
 //! ```rust,no_run
 //! # extern crate winres;
-//! let mut res = winres::WindowsResource::new();
-//! res.set_icon("icon.ico")
-//!    .set("InternalName", "TEST.EXE")
-//!    .set_version_info(winres::VersionInfoProperty::PRODUCTVERSION, 0x0001000000000000);
-//! res.compile().unwrap();
+//! if cfg!(target_os = "windows") {
+//!     let mut res = winres::WindowsResource::new();
+//!     res.set_icon("icon.ico")
+//!        .set("InternalName", "TEST.EXE")
+//!        .set_version_info(winres::VersionInfoProperty::PRODUCTVERSION, 0x0001000000000000);
+//!     res.compile().unwrap();
+//! }
 //! ```
 use std::env;
 use std::path::{PathBuf, Path};
