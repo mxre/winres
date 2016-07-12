@@ -1,10 +1,29 @@
+//! Rust Windows resource helper
+//!
+//! This crate implements a simple generator for Windows resource (.rc) files
+//! for use with either Microsoft `rc.exe` resource compiler or with GNU `windres.exe`
+//!
+//! The `WindowsResorce::compile()` method is inteded to be used from a build script and
+//! needs environment variables from cargo to be set. It not only compiles the resource
+//! but directs cargo to link the resource compilers output.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # extern crate winres;
+//! let mut res = winres::WindowsResource::new();
+//! res.set_icon("icon.ico")
+//!    .set("InternalName", "TEST.EXE")
+//!    .set_version_info(winres::VersionInfoProperty::PRODUCTVERSION, 0x0001000000000000);
+//! res.compile().unwrap();
+//! ```
 use std::env;
 use std::path::{PathBuf, Path};
 use std::process;
 use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
-use std::fs::File;
+use std::fs;
 
 #[cfg(target_env = "msvc")]
 static TK_PATH: &'static str = "C:\\Program Files (x86)\\Windows Kits\\8.1";
@@ -20,25 +39,47 @@ pub enum Toolkit {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-pub enum VersionInfoProperty {
-    FILEVERSION = 0x0,
-    PRODUCTVERSION = 0x1,
-    FILEOS = 0x2,
-    FILETYPE = 0x3,
-    FILESUBTYPE = 0x4,
-    FILEFLAGSMASK = 0x5,
-    FILEFLAGS = 0x6,
+pub enum VersionInfo {
+    /// Fileversion
+    ///
+    /// The version value consists of four 16 bit words, e.g.,
+    /// `MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE`
+    FILEVERSION,
+    /// Productversion
+    ///
+    /// The version value consists of four 16 bit words, e.g.,
+    /// `MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE`
+    PRODUCTVERSION,
+    /// Targeted operating system
+    ///
+    /// Should be Windows NT, with value `0x40000`
+    FILEOS,
+    /// Type of the resulting binary
+    ///
+    /// The value (for a rust compiler output) should be
+    /// 1 for a EXE and 2 for a DLL
+    FILETYPE,
+    /// Subtype
+    ///
+    /// Only for Windows drivers
+    FILESUBTYPE,
+    /// Bit mask for FILEFLAGS
+    FILEFLAGSMASK,
+    /// Additional file flags
+    ///
+    /// Only the bits set in FILEFLAGSMASK are read
+    FILEFLAGS,
 }
 
-pub struct WindowsResorce {
+pub struct WindowsResource {
     toolkit_path: String,
     properties: HashMap<String, String>,
-    version_info: HashMap<VersionInfoProperty, i64>,
+    version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
     icon: Option<String>,
 }
 
-impl WindowsResorce {
+impl WindowsResource {
     pub fn toolkit() -> Toolkit {
         if cfg!(target_env = "gnu") {
             Toolkit::GNU
@@ -76,7 +117,7 @@ impl WindowsResorce {
     ///
     pub fn new() -> Self {
         let mut props: HashMap<String, String> = HashMap::new();
-        let mut ver: HashMap<VersionInfoProperty, i64> = HashMap::new();
+        let mut ver: HashMap<VersionInfo, u64> = HashMap::new();
 
         props.insert("FileVersion".to_string(),
                      env::var("CARGO_PKG_VERSION").unwrap().to_string());
@@ -87,20 +128,20 @@ impl WindowsResorce {
         props.insert("FileDescription".to_string(),
                      env::var("CARGO_PKG_DESCRIPTION").unwrap().to_string());
 
-        let mut version = 0 as i64;
+        let mut version = 0 as u64;
         version |= env::var("CARGO_PKG_VERSION_MAJOR").unwrap().parse().unwrap_or(0) << 48;
         version |= env::var("CARGO_PKG_VERSION_MINOR").unwrap().parse().unwrap_or(0) << 32;
         version |= env::var("CARGO_PKG_VERSION_PATCH").unwrap().parse().unwrap_or(0) << 16;
-        version |= env::var("CARGO_PKG_VERSION_PRE").unwrap().parse().unwrap_or(0);
-        ver.insert(VersionInfoProperty::FILEVERSION, version);
-        ver.insert(VersionInfoProperty::PRODUCTVERSION, version);
-        ver.insert(VersionInfoProperty::FILEOS, 0x00040000);
-        ver.insert(VersionInfoProperty::FILETYPE, 1);
-        ver.insert(VersionInfoProperty::FILESUBTYPE, 0);
-        ver.insert(VersionInfoProperty::FILEFLAGSMASK, 0x3F);
-        ver.insert(VersionInfoProperty::FILEFLAGS, 0);
+        //version |= env::var("CARGO_PKG_VERSION_PRE").unwrap().parse().unwrap_or(0);
+        ver.insert(VersionInfo::FILEVERSION, version);
+        ver.insert(VersionInfo::PRODUCTVERSION, version);
+        ver.insert(VersionInfo::FILEOS, 0x00040000);
+        ver.insert(VersionInfo::FILETYPE, 1);
+        ver.insert(VersionInfo::FILESUBTYPE, 0);
+        ver.insert(VersionInfo::FILEFLAGSMASK, 0x3F);
+        ver.insert(VersionInfo::FILEFLAGS, 0);
 
-        WindowsResorce {
+        WindowsResource {
             toolkit_path: TK_PATH.to_string(),
             properties: props,
             version_info: ver,
@@ -111,9 +152,17 @@ impl WindowsResorce {
 
     /// Set string properties of the version info struct.
     ///
-    /// Possible field names are: `"FileVersion"`, `"FileDescription"`, `"ProductVersion"`,
-    /// `"ProductName"`, `"OriginalFilename"`, `"LegalCopyright"`, `"LeagalTrademark"`,
-    /// `"CompanyName"`, `"Comments"`
+    /// Possible field names are:
+    ///
+    ///  - `"FileVersion"`
+    ///  - `"FileDescription"`
+    ///  - `"ProductVersion"`
+    ///  - `"ProductName"`
+    ///  - `"OriginalFilename"`
+    ///  - `"LegalCopyright"`
+    ///  - `"LeagalTrademark"`
+    ///  - `"CompanyName"`
+    ///  - `"Comments"`
     ///
     /// Additionally there exists
     /// `"PrivateBuild"`, `"SpecialBuild"`
@@ -139,6 +188,10 @@ impl WindowsResorce {
         self
     }
 
+    /// Set an icon filename
+    ///
+    /// This icon need to be in `ico` format. The filename can be absolute
+    /// or relative to the projects root.
     pub fn set_icon<'a>(&mut self, path: &'a str) -> &mut Self {
         self.icon = Some(path.to_string());
         self
@@ -146,17 +199,23 @@ impl WindowsResorce {
 
     /// Set a version info struct property
     /// Currently we only support numeric values, you have to look them up.
-    pub fn set_version_info(&mut self, field: VersionInfoProperty, value: i64) -> &mut Self {
+    pub fn set_version_info(&mut self, field: VersionInfo, value: u64) -> &mut Self {
         self.version_info.insert(field, value);
         self
     }
 
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let mut f = try!(File::create(path));
+        let mut f = try!(fs::File::create(path));
+        try!(write!(f, "#include <winver.h>\n"));
         try!(write!(f, "VS_VERSION_INFO VERSIONINFO\n"));
         for (k, v) in self.version_info.iter() {
-            try!(write!(f, "{:?} 0x{:x}\n", k, v));
+            match *k {
+                VersionInfo::FILEVERSION 
+                | VersionInfo::PRODUCTVERSION =>
+                    try!(write!(f, "{:?} {}, {}, {}, {}\n", k, (*v >> 48) as u16, (*v >> 32) as u16, (*v >> 16) as u16, *v as u16)),
+                _ => try!(write!(f, "{:?} 0x{:x}\n", k, v))
+            };
         }
         try!(write!(f, "{{\nBLOCK \"StringFileInfo\"\n"));
         try!(write!(f, "{{\nBLOCK \"040904B0\"\n{{\n"));
@@ -192,6 +251,7 @@ impl WindowsResorce {
         let input = PathBuf::from(input);
         let status = try!(process::Command::new("windres.exe")
             .current_dir(&self.toolkit_path)
+            .arg(format!("-I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             .arg(format!("{}", input.display()))
             .arg(format!("{}", output.display()))
             .status());
@@ -220,15 +280,16 @@ impl WindowsResorce {
     #[cfg(target_env = "msvc")]
     fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let rc_exe = if cfg!(target_arch = "x86_64") {
-            PathBuf::from(self.toolkit_path).join("bin\\x64\\rc.exe")
+            PathBuf::from(&self.toolkit_path).join("bin\\x64\\rc.exe")
         } else {
-            PathBuf::from(self.toolkit_path).join("bin\\x86\\rc.exe")
+            PathBuf::from(&self.toolkit_path).join("bin\\x86\\rc.exe")
         };
-        let inc_win = PathBuf::from(self.toolkit_path).join("Include\\um");
-        let inc_shared = PathBuf::from(self.toolkit_path).join("Include\\shared");
+        let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\um");
+        let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\shared");
         let output = PathBuf::from(output_dir).join("resource.lib");
         let input = PathBuf::from(input);
-        try!(process::Command::new(rc_exe)
+        let status = try!(process::Command::new(rc_exe)
+            .arg(format!("/I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             .arg(format!("/I{}", inc_shared.display()))
             .arg(format!("/I{}", inc_win.display()))
             .arg("/nologo")
@@ -249,6 +310,10 @@ impl WindowsResorce {
     /// This function generates a resource file from the settings, or
     /// uses an existing resource file and passes it to the resource compiler
     /// of your toolkit.
+    ///
+    /// Further more we will print the correct statements for
+    /// `cargo:rustc-link-lib=` and `cargo:rustc-link-search` on the console,
+    /// so that the cargo build script can link the compiled resource file.
     pub fn compile(&self) -> io::Result<()> {
         let output = PathBuf::from(env::var("OUT_DIR").unwrap());
         let rc = output.join("resource.rc");
