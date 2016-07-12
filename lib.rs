@@ -40,6 +40,9 @@ pub enum Toolkit {
     Unknown,
 }
 
+// TODO detection
+// msvc: reg query "HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots" (KitsRoot10, KitsRoot81)
+
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
     /// Fileversion
@@ -177,7 +180,7 @@ impl WindowsResource {
 
     /// Set the correct path for the toolkit.
     ///
-    /// For the GNU toolkit this has to be the path where MSYS or MinGW
+    /// For the GNU toolkit this has to be the path where MinGW
     /// put `windres.exe` and `ar.exe`. This could be something like:
     /// `"C:\Program Files\mingw-w64\x86_64-5.3.0-win32-seh-rt_v4-rev0\mingw64\bin"`
     ///
@@ -210,17 +213,18 @@ impl WindowsResource {
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
         try!(write!(f, "#include <winver.h>\n"));
+        try!(write!(f, "#pragma code_page(65001)\n"));
         try!(write!(f, "VS_VERSION_INFO VERSIONINFO\n"));
         for (k, v) in self.version_info.iter() {
             match *k {
                 VersionInfo::FILEVERSION 
                 | VersionInfo::PRODUCTVERSION =>
                     try!(write!(f, "{:?} {}, {}, {}, {}\n", k, (*v >> 48) as u16, (*v >> 32) as u16, (*v >> 16) as u16, *v as u16)),
-                _ => try!(write!(f, "{:?} 0x{:x}\n", k, v))
+                _ => try!(write!(f, "{:?} {:#x}\n", k, v))
             };
         }
         try!(write!(f, "{{\nBLOCK \"StringFileInfo\"\n"));
-        try!(write!(f, "{{\nBLOCK \"040904B0\"\n{{\n"));
+        try!(write!(f, "{{\nBLOCK \"040904b0\"\n{{\n"));
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
                 try!(write!(f, "VALUE \"{}\", \"{}\"\n", k, v));
@@ -229,7 +233,7 @@ impl WindowsResource {
         try!(write!(f, "}}\n}}\n"));
 
         try!(write!(f, "BLOCK \"VarFileInfo\" {{\n"));
-        try!(write!(f, "VALUE \"Translation\", 0x0409, 0x04B0\n"));
+        try!(write!(f, "VALUE \"Translation\", 0x0409, 0x04b0\n"));
         try!(write!(f, "}}\n}}\n"));
         if self.icon.is_some() {
 			try!(write!(f, "1 ICON {}\n", self.icon.clone().unwrap()));
