@@ -15,7 +15,8 @@
 //!     let mut res = winres::WindowsResource::new();
 //!     res.set_icon("icon.ico")
 //!        .set("InternalName", "TEST.EXE")
-//!        .set_version_info(winres::VersionInfoProperty::PRODUCTVERSION, 0x0001000000000000);
+//!        // manually set version 1.0.0.0
+//!        .set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0001000000000000);
 //!     res.compile().unwrap();
 //! }
 //! ```
@@ -90,7 +91,8 @@ pub struct WindowsResource {
     version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
     icon: Option<String>,
-    language: u16
+    language: u16,
+    manifest: Option<String>
 }
 
 impl WindowsResource {
@@ -169,6 +171,7 @@ impl WindowsResource {
             rc_file: None,
             icon: None,
             language: 0,
+            manifest: None,
         }
     }
 
@@ -191,6 +194,9 @@ impl WindowsResource {
     /// `"PrivateBuild"`, `"SpecialBuild"`
     /// which should only be set, when the `FILEFLAGS` property is set to
     /// `VS_FF_PRIVATEBUILD(0x08)` or `VS_FF_SPECIALBUILD(0x20)`
+    ///
+    /// It is possible to use arbirtrary field names, but Windows Explorer and other
+    /// tools might not show them.
     pub fn set<'a>(&mut self, name: &'a str, value: &'a str) -> &mut Self {
         self.properties.insert(name.to_string(), value.to_string());
         self
@@ -253,6 +259,28 @@ impl WindowsResource {
         self.version_info.insert(field, value);
         self
     }
+    
+    /// Set the embedded manifest file
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let mut res = winres::WindowsResource::new();
+    /// res.set_manifest("
+    /// <assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">
+    /// <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">
+    ///     <security>
+    ///         <requestedPrivileges>
+    ///             <requestedExecutionLevel level=\"asInvoker\" uiAccess=\"false\" />
+    ///         </requestedPrivileges>
+    ///     </security>
+    /// </trustInfo>
+    /// </assembly>");
+    /// ```
+    pub fn set_manifest<'a>(&mut self, manifest: &'a str) -> &mut Self {
+        self.manifest = Some(manifest.to_string());
+        self
+    }
 
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
@@ -288,7 +316,13 @@ impl WindowsResource {
         try!(write!(f, "VALUE \"Translation\", {:#x}, 0x04b0\n", self.language));
         try!(write!(f, "}}\n}}\n"));
         if self.icon.is_some() {
-            try!(write!(f, "1 ICON {}\n", self.icon.clone().unwrap()));
+            try!(write!(f, "1 ICON {}\n", self.icon.as_ref().unwrap()));
+        }
+        if self.manifest.is_some() {
+            try!(write!(f, "2 24\n"));
+            try!(write!(f, "{{\n"));
+            try!(write!(f, "\"{}\"\n", self.manifest.as_ref().unwrap().replace("\"", "\"\"").trim()));
+            try!(write!(f, "}}\n"));
         }
         Ok(())
     }
