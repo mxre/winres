@@ -215,7 +215,7 @@ impl WindowsResource {
         self.toolkit_path = path.to_string();
         self
     }
-    
+
     /// Set the user interface language of the file
     ///
     /// For possible values take a look at the MSDN page for resource files,
@@ -259,7 +259,7 @@ impl WindowsResource {
         self.version_info.insert(field, value);
         self
     }
-    
+
     /// Set the embedded manifest file
     ///
     /// # Example
