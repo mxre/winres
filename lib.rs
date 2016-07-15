@@ -51,6 +51,8 @@ use std::io::prelude::*;
 use std::fs;
 use std::error::Error;
 
+extern crate toml;
+
 /// The compiler version defines which toolkit we have to use.
 /// The value is defined by the value of `cfg!(target_env=)`
 pub enum Toolkit {
@@ -92,7 +94,7 @@ pub struct WindowsResource {
     icon: Option<String>,
     language: u16,
     manifest: Option<String>,
-    output_directory: String
+    output_directory: String,
 }
 
 impl WindowsResource {
@@ -118,6 +120,18 @@ impl WindowsResource {
     /// | `"ProductName"`      | `package.name`               |
     /// | `"FileDescription"`  | `package.description`        |
     ///
+    /// Furthermore if a section `package.metadata.winres` exists
+    /// in Cargo.toml it will be parsed. Values in this section take precedence
+    /// over the values provided natively by cargo. Only the string table
+    /// of the version struct can be set this way.
+    ///
+    /// ```,toml
+    /// [package.metadata.winres]
+    /// OriginalFilename = "testing.exe"
+    /// FileDescription = "⛄❤☕"
+    /// LegalCopyright = "Copyright © 2016"
+    /// ```
+    ///
     /// The version info struct is set to some values
     /// sensible for creating an executable file.
     ///
@@ -131,7 +145,7 @@ impl WindowsResource {
     /// | `FILEFLAGSMASK`      | `VS_FFI_FILEFLAGSMASK (0x3F)`|
     /// | `FILEFLAGS`          | `0x0`                        |
     ///
-    /// Additionally, the language is set to neutral (0),
+    /// Additionally, the language field is set to neutral (0),
     /// and no icon is set.
     pub fn new() -> Self {
         let mut props: HashMap<String, String> = HashMap::new();
@@ -145,6 +159,8 @@ impl WindowsResource {
                      env::var("CARGO_PKG_NAME").unwrap().to_string());
         props.insert("FileDescription".to_string(),
                      env::var("CARGO_PKG_DESCRIPTION").unwrap().to_string());
+
+        parse_cargo_toml(&mut props).unwrap();
 
         let mut version = 0 as u64;
         version |= env::var("CARGO_PKG_VERSION_MAJOR").unwrap().parse().unwrap_or(0) << 48;
@@ -344,7 +360,7 @@ impl WindowsResource {
         self.rc_file = Some(path.to_string());
         self
     }
-    
+
     /// Override the output directoy.
     ///
     /// As a default, we use `%OUT_DIR%` set by cargo, but it can be necessary to override the
@@ -385,7 +401,7 @@ impl WindowsResource {
 
         Ok(())
     }
-    
+
     /// Run the resource compiler
     ///
     /// This function generates a resource file from the settings, or
@@ -441,7 +457,7 @@ impl WindowsResource {
 }
 
 /// Find a Windows SDK
-fn get_sdk() -> Result<Vec<String>, io::Error> {
+fn get_sdk() -> io::Result<Vec<String>> {
     let output = try!(process::Command::new("reg")
         .arg("query")
         .arg("HKLM\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots")
@@ -459,4 +475,36 @@ fn get_sdk() -> Result<Vec<String>, io::Error> {
         }
     }
     Ok(kits)
+}
+
+fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
+    let cargo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("Cargo.toml");
+    let mut f = try!(fs::File::open(cargo));
+    let mut cargo_toml = String::new();
+    try!(f.read_to_string(&mut cargo_toml));
+    if let Some(ml) = toml::Parser::new(&cargo_toml).parse() {
+        if let Some(pkg) = ml.get("package") {
+            if let Some(pkg) = pkg.lookup("metadata.winres") {
+                if let Some(pkg) = pkg.as_table() {
+                    for (k, v) in pkg {
+                        // println!("{} {}", k ,v);
+                        if let Some(v) = v.as_str() {
+                            props.insert(k.clone(), v.to_string());
+                        } else {
+                            println!("package.metadata.winres.{} is not a string", k);
+                        }
+                    }
+                } else {
+                    println!("package.metadata.winres is not a table");
+                }
+            } else {
+                println!("package.metadata.winres does not exist");
+            }
+        } else {
+            println!("package section missing");
+        }
+    } else {
+        println!("parsing error")
+    }
+    Ok(())
 }
