@@ -9,16 +9,21 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust
 //! # extern crate winres;
+//! # use std::io;
+//! # fn test_main() -> io::Result<()> {
 //! if cfg!(target_os = "windows") {
 //!     let mut res = winres::WindowsResource::new();
-//!     res.set_icon("icon.ico")
+//!     res.set_icon("test.ico")
+//! #      .set_output_directory(".")
 //!        .set("InternalName", "TEST.EXE")
 //!        // manually set version 1.0.0.0
 //!        .set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0001000000000000);
-//!     res.compile().unwrap();
+//!     try!(res.compile());
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Defaults
@@ -46,41 +51,35 @@ use std::io::prelude::*;
 use std::fs;
 use std::error::Error;
 
+/// The compiler version defines which toolkit we have to use.
+/// The value is defined by the value of `cfg!(target_env=)`
 pub enum Toolkit {
+    /// use Microsoft Visual C and Windows SDK
     MSVC,
+    /// use GNU Bintools
     GNU,
+    /// neiter `cfg!(target_env="msvc")` nor `cfg!(target_env="gnu")` was set.
     Unknown,
 }
 
+/// Version info field names
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
-    /// Fileversion
-    ///
     /// The version value consists of four 16 bit words, e.g.,
     /// `MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE`
     FILEVERSION,
-    /// Productversion
-    ///
     /// The version value consists of four 16 bit words, e.g.,
     /// `MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE`
     PRODUCTVERSION,
-    /// Targeted operating system
-    ///
     /// Should be Windows NT Win32, with value `0x40004`
     FILEOS,
-    /// Type of the resulting binary
-    ///
     /// The value (for a rust compiler output) should be
     /// 1 for a EXE and 2 for a DLL
     FILETYPE,
-    /// Subtype
-    ///
     /// Only for Windows drivers
     FILESUBTYPE,
     /// Bit mask for FILEFLAGS
     FILEFLAGSMASK,
-    /// Additional file flags
-    ///
     /// Only the bits set in FILEFLAGSMASK are read
     FILEFLAGS,
 }
@@ -92,7 +91,8 @@ pub struct WindowsResource {
     rc_file: Option<String>,
     icon: Option<String>,
     language: u16,
-    manifest: Option<String>
+    manifest: Option<String>,
+    output_directory: String
 }
 
 impl WindowsResource {
@@ -172,6 +172,7 @@ impl WindowsResource {
             icon: None,
             language: 0,
             manifest: None,
+            output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
         }
     }
 
@@ -264,6 +265,9 @@ impl WindowsResource {
     ///
     /// # Example
     ///
+    /// The following manifest will brand the exe as requireing administrator privileges.
+    /// Thus every time it is executed, a Windows UAC dialog will apear.
+    ///
     /// ```rust
     /// let mut res = winres::WindowsResource::new();
     /// res.set_manifest("
@@ -271,7 +275,7 @@ impl WindowsResource {
     /// <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">
     ///     <security>
     ///         <requestedPrivileges>
-    ///             <requestedExecutionLevel level=\"asInvoker\" uiAccess=\"false\" />
+    ///             <requestedExecutionLevel level=\"requireAdministrator\" uiAccess=\"false\" />
     ///         </requestedPrivileges>
     ///     </security>
     /// </trustInfo>
@@ -318,22 +322,35 @@ impl WindowsResource {
         if self.icon.is_some() {
             try!(write!(f, "1 ICON {}\n", self.icon.as_ref().unwrap()));
         }
-        if self.manifest.is_some() {
-            try!(write!(f, "2 24\n"));
+        if let Some(manf) = self.manifest.as_ref() {
+            if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
+                try!(write!(f, "{} 24\n", e));
+            }
             try!(write!(f, "{{\n"));
-            try!(write!(f, "\"{}\"\n", self.manifest.as_ref().unwrap().replace("\"", "\"\"").trim()));
+            for line in manf.lines() {
+                try!(write!(f, "\"{}\"\n", line.replace("\"", "\"\"").trim()));
+            }
             try!(write!(f, "}}\n"));
         }
         Ok(())
     }
 
-    /// Set an already existing resource file.
+    /// Set a path to an already existing resource file.
     ///
     /// We will neither modify this file nor parse its contents. This function
     /// simply replaces the internaly generated resource file that is passed to
     /// the compiler. You can use this function to write a resource file yourself.
     pub fn set_resource_file<'a>(&mut self, path: &'a str) -> &mut Self {
         self.rc_file = Some(path.to_string());
+        self
+    }
+    
+    /// Override the output directoy.
+    ///
+    /// As a default, we use `%OUT_DIR%` set by cargo, but it can be necessary to override the
+    /// the setting.
+    pub fn set_output_directory<'a>(&mut self, path: &'a str) -> &mut Self {
+        self.output_directory = path.to_string();
         self
     }
 
@@ -368,6 +385,31 @@ impl WindowsResource {
 
         Ok(())
     }
+    
+    /// Run the resource compiler
+    ///
+    /// This function generates a resource file from the settings, or
+    /// uses an existing resource file and passes it to the resource compiler
+    /// of your toolkit.
+    ///
+    /// Further more we will print the correct statements for
+    /// `cargo:rustc-link-lib=` and `cargo:rustc-link-search` on the console,
+    /// so that the cargo build script can link the compiled resource file.
+    pub fn compile(&self) -> io::Result<()> {
+        let output = PathBuf::from(&self.output_directory);
+        let rc = output.join("resource.rc");
+        if self.rc_file.is_none() {
+            try!(self.write_resource_file(&rc));
+        }
+        let rc = if let Some(s) = self.rc_file.as_ref() {
+            s.clone()
+        } else {
+            rc.to_str().unwrap().to_string()
+        };
+        try!(self.compile_with_toolkit(rc.as_str(), &self.output_directory));
+
+        Ok(())
+    }
 
     #[cfg(target_env = "msvc")]
     fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
@@ -394,27 +436,6 @@ impl WindowsResource {
 
         println!("cargo:rustc-link-search=native={}", output_dir);
         println!("cargo:rustc-link-lib=static={}", "resource");
-        Ok(())
-    }
-
-    /// Run the resource compiler
-    ///
-    /// This function generates a resource file from the settings, or
-    /// uses an existing resource file and passes it to the resource compiler
-    /// of your toolkit.
-    ///
-    /// Further more we will print the correct statements for
-    /// `cargo:rustc-link-lib=` and `cargo:rustc-link-search` on the console,
-    /// so that the cargo build script can link the compiled resource file.
-    pub fn compile(&self) -> io::Result<()> {
-        let output = PathBuf::from(env::var("OUT_DIR").unwrap());
-        let rc = output.join("resource.rc");
-        if self.rc_file.is_none() {
-            try!(self.write_resource_file(&rc));
-        }
-        let rc = self.rc_file.clone().unwrap_or(rc.to_str().unwrap().to_string());
-        try!(self.compile_with_toolkit(rc.as_str(), output.to_str().unwrap()));
-
         Ok(())
     }
 }
