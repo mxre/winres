@@ -3,7 +3,7 @@
 //! This crate implements a simple generator for Windows resource (.rc) files
 //! for use with either Microsoft `rc.exe` resource compiler or with GNU `windres.exe`
 //!
-//! The `WindowsResorce::compile()` method is inteded to be used from a build script and
+//! The [`WindowsResorce::compile()`] method is inteded to be used from a build script and
 //! needs environment variables from cargo to be set. It not only compiles the resource
 //! but directs cargo to link the resource compilers output.
 //!
@@ -29,7 +29,7 @@
 //! # Defaults
 //!
 //! We try to guess some sensible default values from Cargo's build time environement variables
-//! This is described in `WindowsResource::new()`. Further more we have to know there to find the
+//! This is described in [`WindowsResource::new()`]. Further more we have to know there to find the
 //! resource compiler for the MSVC Toolkit this can be done by looking up a registry key but
 //! for MinGW this has to be done manually.
 //!
@@ -41,6 +41,9 @@
 //! Note that the toolkit bitness as to match the one from the current Rust compiler. If you are
 //! using Rust GNU 64-bit you have to use MinGW64. For MSVC this is simpler as (recent) Windows
 //! SDK always installs both versions on a 64-bit system.
+//!
+//! [`WindowsResorce::compile()`]: struct.WindowsResource.html#method.compile
+//! [`WindowsResource::new()`]: struct.WindowsResource.html#method.new
 
 use std::env;
 use std::path::{PathBuf, Path};
@@ -94,6 +97,7 @@ pub struct WindowsResource {
     icon: Option<String>,
     language: u16,
     manifest: Option<String>,
+    manifest_file: Option<String>,
     output_directory: String,
 }
 
@@ -188,6 +192,7 @@ impl WindowsResource {
             icon: None,
             language: 0,
             manifest: None,
+            manifest_file: None,
             output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
         }
     }
@@ -281,7 +286,7 @@ impl WindowsResource {
     ///
     /// # Example
     ///
-    /// The following manifest will brand the exe as requireing administrator privileges.
+    /// The following manifest will brand the exe as requesting administrator privileges.
     /// Thus every time it is executed, a Windows UAC dialog will apear.
     ///
     /// ```rust
@@ -298,7 +303,20 @@ impl WindowsResource {
     /// </assembly>");
     /// ```
     pub fn set_manifest<'a>(&mut self, manifest: &'a str) -> &mut Self {
+        self.manifest_file = None;
         self.manifest = Some(manifest.to_string());
+        self
+    }
+
+    /// Some as [`set_manifest()`] but a filename can be provided and
+    /// file is included by the resource compieler itself.
+    /// This method works the same way as [`set_icon()`]
+    ///
+    /// [`set_manifest()`]: #method.set_manifest
+    /// [`set_icon()`]: #method.set_icon
+    pub fn set_manifest_file<'a>(&mut self, file: &'a str) -> &mut Self {
+        self.manifest_file = Some(file.to_string());
+        self.manifest = None;
         self
     }
 
@@ -336,17 +354,19 @@ impl WindowsResource {
         try!(write!(f, "VALUE \"Translation\", {:#x}, 0x04b0\n", self.language));
         try!(write!(f, "}}\n}}\n"));
         if self.icon.is_some() {
-            try!(write!(f, "1 ICON {}\n", self.icon.as_ref().unwrap()));
+            try!(write!(f, "1 ICON \"{}\"\n", self.icon.as_ref().unwrap()));
         }
-        if let Some(manf) = self.manifest.as_ref() {
-            if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
+        if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
+            if let Some(manf) = self.manifest.as_ref() {
                 try!(write!(f, "{} 24\n", e));
+                try!(write!(f, "{{\n"));
+                for line in manf.lines() {
+                    try!(write!(f, "\"{}\"\n", line.replace("\"", "\"\"").trim()));
+                }
+                try!(write!(f, "}}\n"));
+            } else if let Some(manf) = self.manifest_file.as_ref() {
+                try!(write!(f, "{} 24 \"{}\"", e, manf));
             }
-            try!(write!(f, "{{\n"));
-            for line in manf.lines() {
-                try!(write!(f, "\"{}\"\n", line.replace("\"", "\"\"").trim()));
-            }
-            try!(write!(f, "}}\n"));
         }
         Ok(())
     }
@@ -484,7 +504,7 @@ fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
     try!(f.read_to_string(&mut cargo_toml));
     if let Some(ml) = toml::Parser::new(&cargo_toml).parse() {
         if let Some(pkg) = ml.get("package") {
-            if let Some(pkg) = pkg.lookup("metadata.winres") {
+            if let Some(pkg) = pkg.lookup("package.metadata.winres") {
                 if let Some(pkg) = pkg.as_table() {
                     for (k, v) in pkg {
                         // println!("{} {}", k ,v);
