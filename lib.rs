@@ -324,48 +324,48 @@ impl WindowsResource {
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
         // try!(write!(f, "#include <winver.h>\n"));
-        try!(write!(f, "#pragma code_page(65001)\n"));
-        try!(write!(f, "1 VERSIONINFO\n"));
+        try!(writeln!(f, "#pragma code_page(65001)"));
+        try!(writeln!(f, "1 VERSIONINFO"));
         for (k, v) in self.version_info.iter() {
             match *k {
                 VersionInfo::FILEVERSION |
                 VersionInfo::PRODUCTVERSION => {
-                    try!(write!(f,
-                                "{:?} {}, {}, {}, {}\n",
+                    try!(writeln!(f,
+                                "{:?} {}, {}, {}, {}",
                                 k,
                                 (*v >> 48) as u16,
                                 (*v >> 32) as u16,
                                 (*v >> 16) as u16,
                                 *v as u16))
                 }
-                _ => try!(write!(f, "{:?} {:#x}\n", k, v)),
+                _ => try!(writeln!(f, "{:?} {:#x}", k, v)),
             };
         }
-        try!(write!(f, "{{\nBLOCK \"StringFileInfo\"\n"));
-        try!(write!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{\n", self.language));
+        try!(writeln!(f, "{{\nBLOCK \"StringFileInfo\""));
+        try!(writeln!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{", self.language));
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
-                try!(write!(f, "VALUE \"{}\", \"{}\"\n", k, v));
+                try!(writeln!(f, "VALUE \"{}\", \"{}\"", k, v));
             }
         }
-        try!(write!(f, "}}\n}}\n"));
+        try!(writeln!(f, "}}\n}}"));
 
-        try!(write!(f, "BLOCK \"VarFileInfo\" {{\n"));
-        try!(write!(f, "VALUE \"Translation\", {:#x}, 0x04b0\n", self.language));
-        try!(write!(f, "}}\n}}\n"));
+        try!(writeln!(f, "BLOCK \"VarFileInfo\" {{"));
+        try!(writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language));
+        try!(writeln!(f, "}}\n}}"));
         if self.icon.is_some() {
-            try!(write!(f, "1 ICON \"{}\"\n", self.icon.as_ref().unwrap()));
+            try!(writeln!(f, "1 ICON \"{}\"", self.icon.as_ref().unwrap()));
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
             if let Some(manf) = self.manifest.as_ref() {
-                try!(write!(f, "{} 24\n", e));
-                try!(write!(f, "{{\n"));
+                try!(writeln!(f, "{} 24", e));
+                try!(writeln!(f, "{{"));
                 for line in manf.lines() {
-                    try!(write!(f, "\"{}\"\n", line.replace("\"", "\"\"").trim()));
+                    try!(writeln!(f, "\"{}\"", line.replace("\"", "\"\"").trim()));
                 }
-                try!(write!(f, "}}\n"));
+                try!(writeln!(f, "}}"));
             } else if let Some(manf) = self.manifest_file.as_ref() {
-                try!(write!(f, "{} 24 \"{}\"", e, manf));
+                try!(writeln!(f, "{} 24 \"{}\"", e, manf));
             }
         }
         Ok(())
