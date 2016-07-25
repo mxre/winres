@@ -206,7 +206,7 @@ impl WindowsResource {
     ///  - `"ProductVersion"`
     ///  - `"ProductName"`
     ///  - `"OriginalFilename"`
-    ///  - `"LegalCopyright"`
+    ///  - `"LeagalCopyright"`
     ///  - `"LeagalTrademark"`
     ///  - `"CompanyName"`
     ///  - `"Comments"`
