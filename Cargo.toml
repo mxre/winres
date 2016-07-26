@@ -8,4 +8,4 @@ authors = ["Max Resch <resch.max@gmail.com>"]
 path = "lib.rs"
 
 [dependencies]
-toml = "0.1.30"
+toml = "0.1"

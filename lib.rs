@@ -206,8 +206,8 @@ impl WindowsResource {
     ///  - `"ProductVersion"`
     ///  - `"ProductName"`
     ///  - `"OriginalFilename"`
-    ///  - `"LeagalCopyright"`
-    ///  - `"LeagalTrademark"`
+    ///  - `"LegalCopyright"`
+    ///  - `"LegalTrademark"`
     ///  - `"CompanyName"`
     ///  - `"Comments"`
     ///  - `"InternalName"`
@@ -504,7 +504,7 @@ fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
     try!(f.read_to_string(&mut cargo_toml));
     if let Some(ml) = toml::Parser::new(&cargo_toml).parse() {
         if let Some(pkg) = ml.get("package") {
-            if let Some(pkg) = pkg.lookup("package.metadata.winres") {
+            if let Some(pkg) = pkg.lookup("metadata.winres") {
                 if let Some(pkg) = pkg.as_table() {
                     for (k, v) in pkg {
                         // println!("{} {}", k ,v);
