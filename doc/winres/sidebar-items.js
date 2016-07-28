@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Toolkit","The compiler version defines which toolkit we have to use. The value is defined by the value of `cfg!(target_env=)`"],["VersionInfo","Version info field names"]],"struct":[["WindowsResource",""]]});
