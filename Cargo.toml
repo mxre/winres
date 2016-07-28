@@ -3,6 +3,9 @@ name = "winres"
 description = "Create and set windows icons and metadata for executables"
 version = "0.1.0"
 authors = ["Max Resch <resch.max@gmail.com>"]
+license = "MIT"
+repository = "http://github.com/mxre/winres"
+documentation= "http://mxre.github.com/winres"
 
 [lib]
 path = "lib.rs"
