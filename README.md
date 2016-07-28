@@ -8,8 +8,11 @@ executables and dynamic libraries.
 ## Toolkit
 
 Before we begin you need to have the approptiate tools installed.
- - `rc.exe` from the Windows SDK [https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk]
- - `windres.exe` and `ar.exe` from minGW64 [http://mingw-w64.org/]
+ - `rc.exe` from the [Windows SDK]
+ - `windres.exe` and `ar.exe` from [minGW64]
+ 
+[Windows SDK]: https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk
+[minGW64]: http://mingw-w64.org
 
 If you are using Rust with the MSVC ABI you will need the Windows SDK,
 for the GNU ABI you'll need minGW64.
@@ -70,5 +73,15 @@ of the Windows Explorer:
 
 `FileDescription`, `ProductName`, `ProductVersion`, `OriginalFilename` and `LegalCopyright`
 
-See [https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058.aspx]
+See [MSDN]
 for more details on the version info section of executables/libraries.
+
+[MSDN]: https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058.aspx
+
+## About this project
+
+I've written this crate chiefly for my personal projects, and althou I've tested it
+on my personal computers I have no idea if the behaviour is the same everywhere.
+
+To be brief, I'm very much reliant on your bug reports and feature suggestions
+to make this crate better.
