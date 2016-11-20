@@ -56,7 +56,7 @@ section.
 
 ## Additional Options
 
-For added convinience, `winres` parses, `Cargo.toml` for a `package.metadata.winres` section:
+For added convenience, `winres` parses, `Cargo.toml` for a `package.metadata.winres` section:
 
 ```toml
 [package.metadata.winres]
@@ -80,7 +80,7 @@ for more details on the version info section of executables/libraries.
 
 ## About this project
 
-I've written this crate chiefly for my personal projects, and althou I've tested it
+I've written this crate chiefly for my personal projects, and although I've tested it
 on my personal computers I have no idea if the behaviour is the same everywhere.
 
 To be brief, I'm very much reliant on your bug reports and feature suggestions
