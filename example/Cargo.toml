@@ -1,0 +1,16 @@
+[package]
+name = "winres-example"
+description = "Example for winres"
+version = "0.1.0"
+authors = ["Max Resch <resch.max@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/mxre/winres"
+documentation= "https://mxre.github.io/winres"
+build= "build.rs"
+
+[dependencies]
+winapi = "*"
+user32-sys = "*"
+
+[target.'cfg(target_os="windows")'.build-dependencies]
+winres = { path = ".." }
