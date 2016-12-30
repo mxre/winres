@@ -572,6 +572,51 @@
 <span id="528">528</span>
 <span id="529">529</span>
 <span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Rust Windows resource helper</span>
 <span class='doccomment'>//!</span>
@@ -700,11 +745,17 @@
     <span class='doccomment'>/// | `&quot;FileDescription&quot;`  | `package.description`        |</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// Furthermore if a section `package.metadata.winres` exists</span>
-    <span class='doccomment'>/// in Cargo.toml it will be parsed. Values in this section take precedence</span>
+    <span class='doccomment'>/// in `Cargo.toml` it will be parsed. Values in this section take precedence</span>
     <span class='doccomment'>/// over the values provided natively by cargo. Only the string table</span>
     <span class='doccomment'>/// of the version struct can be set this way.</span>
+    <span class='doccomment'>/// Additionally, the language field is set to neutral (i.e. `0`),</span>
+    <span class='doccomment'>/// and no icon is set. These settings have to be done programmatically.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// `Cargo.toml` files have to be written in UTF-8, we support all valid UTF-8 strings</span>
+    <span class='doccomment'>/// provided.</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// ```,toml</span>
+    <span class='doccomment'>/// #Cargo.toml</span>
     <span class='doccomment'>/// [package.metadata.winres]</span>
     <span class='doccomment'>/// OriginalFilename = &quot;testing.exe&quot;</span>
     <span class='doccomment'>/// FileDescription = &quot;⛄❤☕&quot;</span>
@@ -724,8 +775,6 @@
     <span class='doccomment'>/// | `FILEFLAGSMASK`      | `VS_FFI_FILEFLAGSMASK (0x3F)`|</span>
     <span class='doccomment'>/// | `FILEFLAGS`          | `0x0`                        |</span>
     <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Additionally, the language field is set to neutral (0),</span>
-    <span class='doccomment'>/// and no icon is set.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span>() <span class='op'>-&gt;</span> <span class='self'>Self</span> {
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>props</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>String</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>ver</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>VersionInfo</span>, <span class='ident'>u64</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
@@ -815,8 +864,35 @@
 
     <span class='doccomment'>/// Set the user interface language of the file</span>
     <span class='doccomment'>///</span>
+    <span class='doccomment'>/// # Example</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// ```</span>
+    <span class='doccomment'>/// extern crate winapi;</span>
+    <span class='doccomment'>/// extern crate winres;</span>
+    <span class='doccomment'>/// # use std::io;</span>
+    <span class='doccomment'>/// fn main() {</span>
+    <span class='doccomment'>///   if cfg!(target_os = &quot;windows&quot;) {</span>
+    <span class='doccomment'>///     let mut res = winres::WindowsResource::new();</span>
+    <span class='doccomment'>/// #   res.set_output_directory(&quot;.&quot;);</span>
+    <span class='doccomment'>///     res.set_language(winapi::winnt::MAKELANGID(</span>
+    <span class='doccomment'>///         winapi::winnt::LANG_ENGLISH,</span>
+    <span class='doccomment'>///         winapi::winnt::SUBLANG_ENGLISH_US</span>
+    <span class='doccomment'>///     ));</span>
+    <span class='doccomment'>///     res.compile().unwrap();</span>
+    <span class='doccomment'>///   }</span>
+    <span class='doccomment'>/// }</span>
+    <span class='doccomment'>/// ```</span>
+    <span class='doccomment'>/// For possible values look at the `winapi::winnt` contants, specificaly those,</span>
+    <span class='doccomment'>/// starting with `LANG_` and `SUBLANG`.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// [`make_language_id!`]: macro.make_language_id.html</span>
+    <span class='doccomment'>/// [`winapi::winnt`]: https://retep998.github.io/doc/winapi/winnt/#constants</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// # Table</span>
+    <span class='doccomment'>/// Sometimes it is just simpler to specify the numeric constant directly</span>
+    <span class='doccomment'>/// (That is what most `.rc` files do).</span>
     <span class='doccomment'>/// For possible values take a look at the MSDN page for resource files,</span>
-    <span class='doccomment'>/// we only included some values here.</span>
+    <span class='doccomment'>/// we only listed some values here.</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// | Language            | Value    |</span>
     <span class='doccomment'>/// |---------------------|----------|</span>
@@ -833,9 +909,6 @@
     <span class='doccomment'>/// | Breton              | `0x007e` |</span>
     <span class='doccomment'>/// | Scottish Gaelic     | `0x0091` |</span>
     <span class='doccomment'>/// | Romansch            | `0x0017` |</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// I know that some of these languages are used less often, but</span>
-    <span class='doccomment'>/// they were not included in many other lists.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set_language</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>language</span>: <span class='ident'>u16</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
         <span class='self'>self</span>.<span class='ident'>language</span> <span class='op'>=</span> <span class='ident'>language</span>;
         <span class='self'>self</span>
@@ -866,16 +939,17 @@
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// ```rust</span>
     <span class='doccomment'>/// let mut res = winres::WindowsResource::new();</span>
-    <span class='doccomment'>/// res.set_manifest(&quot;</span>
-    <span class='doccomment'>/// &lt;assembly xmlns=\&quot;urn:schemas-microsoft-com:asm.v1\&quot; manifestVersion=\&quot;1.0\&quot;&gt;</span>
-    <span class='doccomment'>/// &lt;trustInfo xmlns=\&quot;urn:schemas-microsoft-com:asm.v3\&quot;&gt;</span>
+    <span class='doccomment'>/// res.set_manifest(r#&quot;</span>
+    <span class='doccomment'>/// &lt;assembly xmlns=&quot;urn:schemas-microsoft-com:asm.v1&quot; manifestVersion=&quot;1.0&quot;&gt;</span>
+    <span class='doccomment'>/// &lt;trustInfo xmlns=&quot;urn:schemas-microsoft-com:asm.v3&quot;&gt;</span>
     <span class='doccomment'>///     &lt;security&gt;</span>
     <span class='doccomment'>///         &lt;requestedPrivileges&gt;</span>
-    <span class='doccomment'>///             &lt;requestedExecutionLevel level=\&quot;requireAdministrator\&quot; uiAccess=\&quot;false\&quot; /&gt;</span>
+    <span class='doccomment'>///             &lt;requestedExecutionLevel level=&quot;requireAdministrator&quot; uiAccess=&quot;false&quot; /&gt;</span>
     <span class='doccomment'>///         &lt;/requestedPrivileges&gt;</span>
     <span class='doccomment'>///     &lt;/security&gt;</span>
     <span class='doccomment'>/// &lt;/trustInfo&gt;</span>
-    <span class='doccomment'>/// &lt;/assembly&gt;&quot;);</span>
+    <span class='doccomment'>/// &lt;/assembly&gt;</span>
+    <span class='doccomment'>/// &quot;#);</span>
     <span class='doccomment'>/// ```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set_manifest</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>manifest</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
         <span class='self'>self</span>.<span class='ident'>manifest_file</span> <span class='op'>=</span> <span class='prelude-val'>None</span>;
@@ -898,7 +972,11 @@
     <span class='doccomment'>/// Write a resource file with the set values</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>write_resource_file</span><span class='op'>&lt;</span><span class='ident'>P</span>: <span class='ident'>AsRef</span><span class='op'>&lt;</span><span class='ident'>Path</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>path</span>: <span class='ident'>P</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>f</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>fs</span>::<span class='ident'>File</span>::<span class='ident'>create</span>(<span class='ident'>path</span>));
+        <span class='comment'>// we don&#39;t need to include this, we use constants instead of macro names</span>
         <span class='comment'>// try!(write!(f, &quot;#include &lt;winver.h&gt;\n&quot;));</span>
+
+        <span class='comment'>// use UTF8 as an encoding</span>
+        <span class='comment'>// this makes it easier, since in rust all string are UTF8</span>
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;#pragma code_page(65001)&quot;</span>));
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;1 VERSIONINFO&quot;</span>));
         <span class='kw'>for</span> (<span class='ident'>k</span>, <span class='ident'>v</span>) <span class='kw'>in</span> <span class='self'>self</span>.<span class='ident'>version_info</span>.<span class='ident'>iter</span>() {
@@ -906,12 +984,12 @@
                 <span class='ident'>VersionInfo</span>::<span class='ident'>FILEVERSION</span> <span class='op'>|</span>
                 <span class='ident'>VersionInfo</span>::<span class='ident'>PRODUCTVERSION</span> <span class='op'>=&gt;</span> {
                     <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>,
-                                <span class='string'>&quot;{:?} {}, {}, {}, {}&quot;</span>,
-                                <span class='ident'>k</span>,
-                                (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>48</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
-                                (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>32</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
-                                (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>16</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
-                                <span class='op'>*</span><span class='ident'>v</span> <span class='kw'>as</span> <span class='ident'>u16</span>))
+                                  <span class='string'>&quot;{:?} {}, {}, {}, {}&quot;</span>,
+                                  <span class='ident'>k</span>,
+                                  (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>48</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
+                                  (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>32</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
+                                  (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>16</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
+                                  <span class='op'>*</span><span class='ident'>v</span> <span class='kw'>as</span> <span class='ident'>u16</span>))
                 }
                 _ <span class='op'>=&gt;</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{:?} {:#x}&quot;</span>, <span class='ident'>k</span>, <span class='ident'>v</span>)),
             };
@@ -1046,7 +1124,7 @@
         }
 
         <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;cargo:rustc-link-search=native={}&quot;</span>, <span class='ident'>output_dir</span>);
-        <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;cargo:rustc-link-lib=static={}&quot;</span>, <span class='string'>&quot;resource&quot;</span>);
+        <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;cargo:rustc-link-lib=dylib={}&quot;</span>, <span class='string'>&quot;resource&quot;</span>);
         <span class='prelude-val'>Ok</span>(())
     }
 }
@@ -1055,7 +1133,7 @@
 <span class='kw'>fn</span> <span class='ident'>get_sdk</span>() <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;&gt;</span> {
     <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;reg&quot;</span>)
         .<span class='ident'>arg</span>(<span class='string'>&quot;query&quot;</span>)
-        .<span class='ident'>arg</span>(<span class='string'>&quot;HKLM\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots&quot;</span>)
+        .<span class='ident'>arg</span>(<span class='string'>r&quot;HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots&quot;</span>)
         .<span class='ident'>output</span>());
 
     <span class='kw'>let</span> <span class='ident'>lines</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>output</span>.<span class='ident'>stdout</span>)
@@ -1063,10 +1141,22 @@
     <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>kits</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
     <span class='kw'>for</span> <span class='ident'>line</span> <span class='kw'>in</span> <span class='ident'>lines</span>.<span class='ident'>lines</span>() {
         <span class='kw'>if</span> <span class='ident'>line</span>.<span class='ident'>trim</span>().<span class='ident'>starts_with</span>(<span class='string'>&quot;KitsRoot&quot;</span>) {
-            <span class='ident'>kits</span>.<span class='ident'>push</span>(<span class='ident'>line</span>.<span class='ident'>chars</span>()
+            <span class='kw'>let</span> <span class='ident'>kit</span> <span class='op'>=</span> <span class='ident'>line</span>.<span class='ident'>chars</span>()
                 .<span class='ident'>skip</span>(<span class='ident'>line</span>.<span class='ident'>find</span>(<span class='string'>&quot;REG_SZ&quot;</span>).<span class='ident'>unwrap</span>() <span class='op'>+</span> <span class='number'>6</span>)
                 .<span class='ident'>skip_while</span>(<span class='op'>|</span><span class='ident'>c</span><span class='op'>|</span> <span class='ident'>c</span>.<span class='ident'>is_whitespace</span>())
-                .<span class='ident'>collect</span>());
+                .<span class='ident'>collect</span>();
+            
+            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>p</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='ident'>kit</span>);
+            <span class='kw'>if</span> <span class='macro'>cfg</span><span class='macro'>!</span>(<span class='ident'>target_arch</span> <span class='op'>=</span> <span class='string'>&quot;x86_64&quot;</span>) {
+                <span class='ident'>p</span>.<span class='ident'>push</span>(<span class='string'>r&quot;bin\x64\rc.exe&quot;</span>)
+            } <span class='kw'>else</span> {
+                <span class='ident'>p</span>.<span class='ident'>push</span>(<span class='string'>r&quot;bin\x86\rc.exe&quot;</span>);
+            }
+
+            <span class='kw'>if</span> <span class='ident'>p</span>.<span class='ident'>exists</span>() {
+                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>kit</span>);
+                <span class='ident'>kits</span>.<span class='ident'>push</span>(<span class='ident'>kit</span>);
+            }
         }
     }
     <span class='prelude-val'>Ok</span>(<span class='ident'>kits</span>)
@@ -1160,11 +1250,9 @@
     <script>
         window.rootPath = "../../";
         window.currentCrate = "winres";
-        window.playgroundUrl = "";
     </script>
     <script src="../../jquery.js"></script>
     <script src="../../main.js"></script>
-    
     <script defer src="../../search-index.js"></script>
 </body>
 </html>

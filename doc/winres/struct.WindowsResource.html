@@ -47,12 +47,10 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-50' class='srclink' href='../src/winres/lib.rs.html#92-102' title='goto source code'>[src]</a></span></h1>
-<pre class='rust struct'>pub struct WindowsResource {
-    // some fields omitted
-}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../winres/struct.WindowsResource.html' title='winres::WindowsResource'>WindowsResource</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-60' class='srclink' href='../src/winres/lib.rs.html#104-477' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.toolkit' class='method'><code>fn <a href='#method.toolkit' class='fnname'>toolkit</a>() -&gt; <a class='enum' href='../winres/enum.Toolkit.html' title='winres::Toolkit'>Toolkit</a></code></h4>
-<h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; Self</code></h4>
+               </span><a id='src-17' class='srclink' href='../src/winres/lib.rs.html#92-102' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct WindowsResource { /* fields omitted */ }</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../winres/struct.WindowsResource.html' title='winres::WindowsResource'>WindowsResource</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-27' class='srclink' href='../src/winres/lib.rs.html#104-510' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.toolkit' class='method'><span id='toolkit.v' class='invisible'><code>fn <a href='#method.toolkit' class='fnname'>toolkit</a>() -&gt; <a class='enum' href='../winres/enum.Toolkit.html' title='winres::Toolkit'>Toolkit</a></code></span></h4>
+<h4 id='method.new' class='method'><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; Self</code></span></h4>
 <div class='docblock'><p>Create a new resource with version info struct</p>
 
 <p>We initialize the resource file with values provided by cargo</p>
@@ -86,11 +84,17 @@
 </table>
 
 <p>Furthermore if a section <code>package.metadata.winres</code> exists
-in Cargo.toml it will be parsed. Values in this section take precedence
+in <code>Cargo.toml</code> it will be parsed. Values in this section take precedence
 over the values provided natively by cargo. Only the string table
-of the version struct can be set this way.</p>
+of the version struct can be set this way.
+Additionally, the language field is set to neutral (i.e. <code>0</code>),
+and no icon is set. These settings have to be done programmatically.</p>
 
-<pre><code class="language-,toml">[package.metadata.winres]
+<p><code>Cargo.toml</code> files have to be written in UTF-8, we support all valid UTF-8 strings
+provided.</p>
+
+<pre><code class="language-,toml">#Cargo.toml
+[package.metadata.winres]
 OriginalFilename = &quot;testing.exe&quot;
 FileDescription = &quot;⛄❤☕&quot;
 LegalCopyright = &quot;Copyright © 2016&quot;
@@ -138,10 +142,7 @@ sensible for creating an executable file.</p>
 </tr>
 </tbody>
 </table>
-
-<p>Additionally, the language field is set to neutral (0),
-and no icon is set.</p>
-</div><h4 id='method.set' class='method'><code>fn <a href='#method.set' class='fnname'>set</a>&lt;'a&gt;(&amp;mut self, name: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, value: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set' class='method'><span id='set.v' class='invisible'><code>fn <a href='#method.set' class='fnname'>set</a>&lt;'a&gt;(&amp;mut self, name: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, value: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set string properties of the version info struct.</p>
 
 <p>Possible field names are:</p>
@@ -166,7 +167,7 @@ which should only be set, when the <code>FILEFLAGS</code> property is set to
 
 <p>It is possible to use arbirtrary field names, but Windows Explorer and other
 tools might not show them.</p>
-</div><h4 id='method.set_toolkit_path' class='method'><code>fn <a href='#method.set_toolkit_path' class='fnname'>set_toolkit_path</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_toolkit_path' class='method'><span id='set_toolkit_path.v' class='invisible'><code>fn <a href='#method.set_toolkit_path' class='fnname'>set_toolkit_path</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set the correct path for the toolkit.</p>
 
 <p>For the GNU toolkit this has to be the path where MinGW
@@ -176,11 +177,32 @@ put <code>windres.exe</code> and <code>ar.exe</code>. This could be something li
 <p>For MSVC the Windows SDK has to be installed. It comes with the resource compiler
 <code>rc.exe</code>. This should be set to the root directory of the Windows SDK, e.g.,
 <code>&quot;C:\Program Files (x86)\Windows Kits\10</code></p>
-</div><h4 id='method.set_language' class='method'><code>fn <a href='#method.set_language' class='fnname'>set_language</a>(&amp;mut self, language: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u16.html'>u16</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_language' class='method'><span id='set_language.v' class='invisible'><code>fn <a href='#method.set_language' class='fnname'>set_language</a>(&amp;mut self, language: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u16.html'>u16</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set the user interface language of the file</p>
 
-<p>For possible values take a look at the MSDN page for resource files,
-we only included some values here.</p>
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>winapi</span>;
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>winres</span>;
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+  <span class='kw'>if</span> <span class='macro'>cfg</span><span class='macro'>!</span>(<span class='ident'>target_os</span> <span class='op'>=</span> <span class='string'>&quot;windows&quot;</span>) {
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>res</span> <span class='op'>=</span> <span class='ident'>winres</span>::<span class='ident'>WindowsResource</span>::<span class='ident'>new</span>();
+    <span class='ident'>res</span>.<span class='ident'>set_language</span>(<span class='ident'>winapi</span>::<span class='ident'>winnt</span>::<span class='ident'>MAKELANGID</span>(
+        <span class='ident'>winapi</span>::<span class='ident'>winnt</span>::<span class='ident'>LANG_ENGLISH</span>,
+        <span class='ident'>winapi</span>::<span class='ident'>winnt</span>::<span class='ident'>SUBLANG_ENGLISH_US</span>
+    ));
+    <span class='ident'>res</span>.<span class='ident'>compile</span>().<span class='ident'>unwrap</span>();
+  }
+}</pre>
+
+<p>For possible values look at the <code>winapi::winnt</code> contants, specificaly those,
+starting with <code>LANG_</code> and <code>SUBLANG</code>.</p>
+
+<h1 id='table' class='section-header'><a href='#table'>Table</a></h1>
+<p>Sometimes it is just simpler to specify the numeric constant directly
+(That is what most <code>.rc</code> files do).
+For possible values take a look at the MSDN page for resource files,
+we only listed some values here.</p>
 
 <table>
 <thead>
@@ -245,54 +267,52 @@ we only included some values here.</p>
 </tr>
 </tbody>
 </table>
-
-<p>I know that some of these languages are used less often, but
-they were not included in many other lists.</p>
-</div><h4 id='method.set_icon' class='method'><code>fn <a href='#method.set_icon' class='fnname'>set_icon</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_icon' class='method'><span id='set_icon.v' class='invisible'><code>fn <a href='#method.set_icon' class='fnname'>set_icon</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set an icon filename</p>
 
 <p>This icon need to be in <code>ico</code> format. The filename can be absolute
 or relative to the projects root.</p>
-</div><h4 id='method.set_version_info' class='method'><code>fn <a href='#method.set_version_info' class='fnname'>set_version_info</a>(&amp;mut self, field: <a class='enum' href='../winres/enum.VersionInfo.html' title='winres::VersionInfo'>VersionInfo</a>, value: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_version_info' class='method'><span id='set_version_info.v' class='invisible'><code>fn <a href='#method.set_version_info' class='fnname'>set_version_info</a>(&amp;mut self, field: <a class='enum' href='../winres/enum.VersionInfo.html' title='winres::VersionInfo'>VersionInfo</a>, value: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set a version info struct property
 Currently we only support numeric values, you have to look them up.</p>
-</div><h4 id='method.set_manifest' class='method'><code>fn <a href='#method.set_manifest' class='fnname'>set_manifest</a>&lt;'a&gt;(&amp;mut self, manifest: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_manifest' class='method'><span id='set_manifest.v' class='invisible'><code>fn <a href='#method.set_manifest' class='fnname'>set_manifest</a>&lt;'a&gt;(&amp;mut self, manifest: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set the embedded manifest file</p>
 
-<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
 <p>The following manifest will brand the exe as requesting administrator privileges.
 Thus every time it is executed, a Windows UAC dialog will apear.</p>
 
 <pre class='rust rust-example-rendered'>
 <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>res</span> <span class='op'>=</span> <span class='ident'>winres</span>::<span class='ident'>WindowsResource</span>::<span class='ident'>new</span>();
-<span class='ident'>res</span>.<span class='ident'>set_manifest</span>(<span class='string'>&quot;
-&lt;assembly xmlns=\&quot;urn:schemas-microsoft-com:asm.v1\&quot; manifestVersion=\&quot;1.0\&quot;&gt;
-&lt;trustInfo xmlns=\&quot;urn:schemas-microsoft-com:asm.v3\&quot;&gt;
+<span class='ident'>res</span>.<span class='ident'>set_manifest</span>(<span class='string'>r#&quot;
+&lt;assembly xmlns=&quot;urn:schemas-microsoft-com:asm.v1&quot; manifestVersion=&quot;1.0&quot;&gt;
+&lt;trustInfo xmlns=&quot;urn:schemas-microsoft-com:asm.v3&quot;&gt;
     &lt;security&gt;
         &lt;requestedPrivileges&gt;
-            &lt;requestedExecutionLevel level=\&quot;requireAdministrator\&quot; uiAccess=\&quot;false\&quot; /&gt;
+            &lt;requestedExecutionLevel level=&quot;requireAdministrator&quot; uiAccess=&quot;false&quot; /&gt;
         &lt;/requestedPrivileges&gt;
     &lt;/security&gt;
 &lt;/trustInfo&gt;
-&lt;/assembly&gt;&quot;</span>);</pre>
-</div><h4 id='method.set_manifest_file' class='method'><code>fn <a href='#method.set_manifest_file' class='fnname'>set_manifest_file</a>&lt;'a&gt;(&amp;mut self, file: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+&lt;/assembly&gt;
+&quot;#</span>);</pre>
+</div><h4 id='method.set_manifest_file' class='method'><span id='set_manifest_file.v' class='invisible'><code>fn <a href='#method.set_manifest_file' class='fnname'>set_manifest_file</a>&lt;'a&gt;(&amp;mut self, file: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Some as <a href="#method.set_manifest"><code>set_manifest()</code></a> but a filename can be provided and
 file is included by the resource compieler itself.
 This method works the same way as <a href="#method.set_icon"><code>set_icon()</code></a></p>
-</div><h4 id='method.write_resource_file' class='method'><code>fn <a href='#method.write_resource_file' class='fnname'>write_resource_file</a>&lt;P: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;&gt;(&amp;self, path: P) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+</div><h4 id='method.write_resource_file' class='method'><span id='write_resource_file.v' class='invisible'><code>fn <a href='#method.write_resource_file' class='fnname'>write_resource_file</a>&lt;P:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;&gt;(&amp;self, path: P) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></span></h4>
 <div class='docblock'><p>Write a resource file with the set values</p>
-</div><h4 id='method.set_resource_file' class='method'><code>fn <a href='#method.set_resource_file' class='fnname'>set_resource_file</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_resource_file' class='method'><span id='set_resource_file.v' class='invisible'><code>fn <a href='#method.set_resource_file' class='fnname'>set_resource_file</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set a path to an already existing resource file.</p>
 
 <p>We will neither modify this file nor parse its contents. This function
 simply replaces the internaly generated resource file that is passed to
 the compiler. You can use this function to write a resource file yourself.</p>
-</div><h4 id='method.set_output_directory' class='method'><code>fn <a href='#method.set_output_directory' class='fnname'>set_output_directory</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></h4>
+</div><h4 id='method.set_output_directory' class='method'><span id='set_output_directory.v' class='invisible'><code>fn <a href='#method.set_output_directory' class='fnname'>set_output_directory</a>&lt;'a&gt;(&amp;mut self, path: &amp;'a <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Override the output directoy.</p>
 
 <p>As a default, we use <code>%OUT_DIR%</code> set by cargo, but it can be necessary to override the
 the setting.</p>
-</div><h4 id='method.compile' class='method'><code>fn <a href='#method.compile' class='fnname'>compile</a>(&amp;self) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+</div><h4 id='method.compile' class='method'><span id='compile.v' class='invisible'><code>fn <a href='#method.compile' class='fnname'>compile</a>(&amp;self) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></span></h4>
 <div class='docblock'><p>Run the resource compiler</p>
 
 <p>This function generates a resource file from the settings, or
@@ -358,11 +378,9 @@ so that the cargo build script can link the compiled resource file.</p>
     <script>
         window.rootPath = "../";
         window.currentCrate = "winres";
-        window.playgroundUrl = "";
     </script>
     <script src="../jquery.js"></script>
     <script src="../main.js"></script>
-    
     <script defer src="../search-index.js"></script>
 </body>
 </html>
