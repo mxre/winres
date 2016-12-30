@@ -125,11 +125,17 @@ impl WindowsResource {
     /// | `"FileDescription"`  | `package.description`        |
     ///
     /// Furthermore if a section `package.metadata.winres` exists
-    /// in Cargo.toml it will be parsed. Values in this section take precedence
+    /// in `Cargo.toml` it will be parsed. Values in this section take precedence
     /// over the values provided natively by cargo. Only the string table
     /// of the version struct can be set this way.
+    /// Additionally, the language field is set to neutral (i.e. `0`),
+    /// and no icon is set. These settings have to be done programmatically.
+    ///
+    /// `Cargo.toml` files have to be written in UTF-8, we support all valid UTF-8 strings
+    /// provided.
     ///
     /// ```,toml
+    /// #Cargo.toml
     /// [package.metadata.winres]
     /// OriginalFilename = "testing.exe"
     /// FileDescription = "⛄❤☕"
@@ -149,8 +155,6 @@ impl WindowsResource {
     /// | `FILEFLAGSMASK`      | `VS_FFI_FILEFLAGSMASK (0x3F)`|
     /// | `FILEFLAGS`          | `0x0`                        |
     ///
-    /// Additionally, the language field is set to neutral (0),
-    /// and no icon is set.
     pub fn new() -> Self {
         let mut props: HashMap<String, String> = HashMap::new();
         let mut ver: HashMap<VersionInfo, u64> = HashMap::new();
@@ -315,16 +319,17 @@ impl WindowsResource {
     ///
     /// ```rust
     /// let mut res = winres::WindowsResource::new();
-    /// res.set_manifest("
-    /// <assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">
-    /// <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">
+    /// res.set_manifest(r#"
+    /// <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+    /// <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     ///     <security>
     ///         <requestedPrivileges>
-    ///             <requestedExecutionLevel level=\"requireAdministrator\" uiAccess=\"false\" />
+    ///             <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
     ///         </requestedPrivileges>
     ///     </security>
     /// </trustInfo>
-    /// </assembly>");
+    /// </assembly>
+    /// "#);
     /// ```
     pub fn set_manifest<'a>(&mut self, manifest: &'a str) -> &mut Self {
         self.manifest_file = None;
@@ -347,7 +352,11 @@ impl WindowsResource {
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
+        // we don't need to include this, we use constants instead of macro names
         // try!(write!(f, "#include <winver.h>\n"));
+
+        // use UTF8 as an encoding
+        // this makes it easier, since in rust all string are UTF8
         try!(writeln!(f, "#pragma code_page(65001)"));
         try!(writeln!(f, "1 VERSIONINFO"));
         for (k, v) in self.version_info.iter() {
@@ -504,7 +513,7 @@ impl WindowsResource {
 fn get_sdk() -> io::Result<Vec<String>> {
     let output = try!(process::Command::new("reg")
         .arg("query")
-        .arg("HKLM\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots")
+        .arg(r"HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots")
         .output());
 
     let lines = try!(String::from_utf8(output.stdout)
@@ -512,10 +521,22 @@ fn get_sdk() -> io::Result<Vec<String>> {
     let mut kits: Vec<String> = Vec::new();
     for line in lines.lines() {
         if line.trim().starts_with("KitsRoot") {
-            kits.push(line.chars()
+            let kit = line.chars()
                 .skip(line.find("REG_SZ").unwrap() + 6)
                 .skip_while(|c| c.is_whitespace())
-                .collect());
+                .collect();
+            
+            let mut p = PathBuf::from(&kit);
+            if cfg!(target_arch = "x86_64") {
+                p.push(r"bin\x64\rc.exe")
+            } else {
+                p.push(r"bin\x86\rc.exe");
+            }
+
+            if p.exists() {
+                println!("{}", kit);
+                kits.push(kit);
+            }
         }
     }
     Ok(kits)
