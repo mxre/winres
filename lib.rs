@@ -315,7 +315,7 @@ impl WindowsResource {
     /// # Example
     ///
     /// The following manifest will brand the exe as requesting administrator privileges.
-    /// Thus every time it is executed, a Windows UAC dialog will apear.
+    /// Thus everytime it is executed, a Windows UAC dialog will appear.
     ///
     /// ```rust
     /// let mut res = winres::WindowsResource::new();
