@@ -41,7 +41,7 @@ example is shown below.
 
 extern crate winres;
 
-fn main() -> io::Result<()> {
+fn main() {
   if cfg!(target_os = "windows") {
     let mut res = winres::WindowsResource::new();
     res.set_icon("test.ico");
@@ -50,9 +50,46 @@ fn main() -> io::Result<()> {
 }
 ```
 
-Thats, it. The file `test.ico` should be located in the same directory as `build.rs`.
+Thats it. The file `test.ico` should be located in the same directory as `build.rs`.
 Metainformation, like program version and description are taken from `Cargo.toml`'s `[package]`
 section.
+
+Note that using this crate on non windows platform is undefined behavoir. It does not cointain,
+saveguards against doing so, none the less it will compile, but `build.rs`, as shown above shoud contain
+a `cfg` option.
+
+Another possibility, is using `cfg` as a directive, to avoid building `winres` on unix platforms
+alltogether, this will save build time. So the example from before could look like this
+
+``toml
+[package]
+#...
+build = "build.rs"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+```
+
+Next, you have to write a build script. A short
+example is shown below.
+
+```rust
+// build.rs
+
+#[cfg(windows)]
+extern crate winres;
+
+#[cfg(windows)]
+fn main() {
+    let mut res = winres::WindowsResource::new();
+    res.set_icon("test.ico");
+    res.compile().unwrap();
+}
+
+#[cfg(unix)]
+fn main() {
+}
+```
 
 ## Additional Options
 
@@ -61,7 +98,7 @@ For added convenience, `winres` parses, `Cargo.toml` for a `package.metadata.win
 ```toml
 [package.metadata.winres]
 OriginalFilename = "PROGRAM.EXE"
-LeagalCopyright = "Copyright © 2016"
+LegalCopyright = "Copyright © 2016"
 #...
 ```
 

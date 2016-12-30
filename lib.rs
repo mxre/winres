@@ -67,6 +67,27 @@ pub enum Toolkit {
     Unknown,
 }
 
+/// Create a language GUI, from constants in `winapi::winnt`.
+///
+/// [`WindowsResource::set_language()`]: struct.WindowsResource.html#method.set_language
+/// [`winapi::winnt`]: https://retep998.github.io/doc/winapi/winnt/#constants
+#[macro_export]
+macro_rules! make_language_id {
+    ($p:expr, $s:expr) => ((s << 10) | p)
+}
+
+/// Extract the primary language identifier
+#[macro_export]
+macro_rules! primary_language {
+    ($lid:expr) => (lid & 0x3dd)
+}
+
+/// Extract the sublanguage identifier
+#[macro_export]
+macro_rules! sub_language {
+    ($lid:expr) => (lid >> 10)
+}
+
 /// Version info field names
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
@@ -240,8 +261,42 @@ impl WindowsResource {
 
     /// Set the user interface language of the file
     ///
+    /// # Macros
+    /// It is possible to generate a the language id using the `make_language_id!` macro
+    ///
+    /// ```rust
+    /// # #[macro_use]
+    /// # extern crate winres;
+    /// # extern crate winapi;
+    /// # use std::io;
+    /// #[macro_use]
+    /// use winres;
+    /// use winapi;
+    /// ##...
+    /// # fn test_language() -> io::Result<()> {
+    /// # if cfg!(target_os = "windows") {
+    ///     let mut res = winres::WindowsResource::new();
+    /// #   res.set_output_directory(".")
+    ///     res.set_language(make_language_id!(
+    ///         winapi::winnt::LANG_ENGLISH,
+    ///         winapi::winnt::SUBLANG_ENGLISH_US
+    ///     ));
+    ///     try!(res.compile());
+    /// # }
+    /// # Ok(())
+    /// # }
+    /// ```
+    /// For possible values look at the `winapi::winnt` contants, specificaly those,
+    /// starting with `LANG_` and `SUBLANG`.
+    ///
+    /// [`make_language_id!`]: macro.make_language_id.html
+    /// [`winapi::winnt`]: https://retep998.github.io/doc/winapi/winnt/#constants
+    ///
+    /// # Table
+    /// Sometimes it is just simpler to specify the numeric constant directly
+    /// (That is what most `.rc` files do).
     /// For possible values take a look at the MSDN page for resource files,
-    /// we only included some values here.
+    /// we only listed some values here.
     ///
     /// | Language            | Value    |
     /// |---------------------|----------|
@@ -258,9 +313,6 @@ impl WindowsResource {
     /// | Breton              | `0x007e` |
     /// | Scottish Gaelic     | `0x0091` |
     /// | Romansch            | `0x0017` |
-    ///
-    /// I know that some of these languages are used less often, but
-    /// they were not included in many other lists.
     pub fn set_language(&mut self, language: u16) -> &mut Self {
         self.language = language;
         self
@@ -331,12 +383,12 @@ impl WindowsResource {
                 VersionInfo::FILEVERSION |
                 VersionInfo::PRODUCTVERSION => {
                     try!(writeln!(f,
-                                "{:?} {}, {}, {}, {}",
-                                k,
-                                (*v >> 48) as u16,
-                                (*v >> 32) as u16,
-                                (*v >> 16) as u16,
-                                *v as u16))
+                                  "{:?} {}, {}, {}, {}",
+                                  k,
+                                  (*v >> 48) as u16,
+                                  (*v >> 32) as u16,
+                                  (*v >> 16) as u16,
+                                  *v as u16))
                 }
                 _ => try!(writeln!(f, "{:?} {:#x}", k, v)),
             };
