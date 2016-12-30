@@ -67,27 +67,6 @@ pub enum Toolkit {
     Unknown,
 }
 
-/// Create a language GUI, from constants in `winapi::winnt`.
-///
-/// [`WindowsResource::set_language()`]: struct.WindowsResource.html#method.set_language
-/// [`winapi::winnt`]: https://retep998.github.io/doc/winapi/winnt/#constants
-#[macro_export]
-macro_rules! make_language_id {
-    ($p:expr, $s:expr) => ((s << 10) | p)
-}
-
-/// Extract the primary language identifier
-#[macro_export]
-macro_rules! primary_language {
-    ($lid:expr) => (lid & 0x3dd)
-}
-
-/// Extract the sublanguage identifier
-#[macro_export]
-macro_rules! sub_language {
-    ($lid:expr) => (lid >> 10)
-}
-
 /// Version info field names
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
@@ -261,30 +240,23 @@ impl WindowsResource {
 
     /// Set the user interface language of the file
     ///
-    /// # Macros
-    /// It is possible to generate a the language id using the `make_language_id!` macro
+    /// # Example
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate winres;
-    /// # extern crate winapi;
+    /// ```
+    /// extern crate winapi;
+    /// extern crate winres;
     /// # use std::io;
-    /// #[macro_use]
-    /// use winres;
-    /// use winapi;
-    /// ##...
-    /// # fn test_language() -> io::Result<()> {
-    /// # if cfg!(target_os = "windows") {
+    /// fn main() {
+    ///   if cfg!(target_os = "windows") {
     ///     let mut res = winres::WindowsResource::new();
-    /// #   res.set_output_directory(".")
-    ///     res.set_language(make_language_id!(
+    /// #   res.set_output_directory(".");
+    ///     res.set_language(winapi::winnt::MAKELANGID(
     ///         winapi::winnt::LANG_ENGLISH,
     ///         winapi::winnt::SUBLANG_ENGLISH_US
     ///     ));
-    ///     try!(res.compile());
-    /// # }
-    /// # Ok(())
-    /// # }
+    ///     res.compile().unwrap();
+    ///   }
+    /// }
     /// ```
     /// For possible values look at the `winapi::winnt` contants, specificaly those,
     /// starting with `LANG_` and `SUBLANG`.
