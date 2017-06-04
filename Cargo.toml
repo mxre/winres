@@ -11,8 +11,8 @@ documentation= "https://mxre.github.io/winres"
 path = "lib.rs"
 
 [dependencies]
-toml = "0.1"
+toml = "0.4"
 
 [dev-dependencies]
 # used for tests
-winapi = "0.2.6"
+winapi = "0.2"

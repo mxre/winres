@@ -8,6 +8,9 @@ repository = "https://github.com/mxre/winres"
 documentation= "https://mxre.github.io/winres"
 build= "build.rs"
 
+[package.metadata.winres]
+LegalCopyright = "Copyright © 2016-2017"
+
 [dependencies]
 winapi = "0.2.6"
 user32-sys = "0.2.0"

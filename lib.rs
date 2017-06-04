@@ -577,29 +577,33 @@ fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
     let mut f = fs::File::open(cargo)?;
     let mut cargo_toml = String::new();
     f.read_to_string(&mut cargo_toml)?;
-    if let Some(ml) = toml::Parser::new(&cargo_toml).parse() {
+    if let Ok(ml) = cargo_toml.parse::<toml::Value>() {
         if let Some(pkg) = ml.get("package") {
-            if let Some(pkg) = pkg.lookup("metadata.winres") {
-                if let Some(pkg) = pkg.as_table() {
-                    for (k, v) in pkg {
-                        // println!("{} {}", k ,v);
-                        if let Some(v) = v.as_str() {
-                            props.insert(k.clone(), v.to_string());
-                        } else {
-                            println!("package.metadata.winres.{} is not a string", k);
+            if let Some(pkg) = pkg.get("metadata") {
+                if let Some(pkg) = pkg.get("winres") {
+                    if let Some(pkg) = pkg.as_table() {
+                        for (k, v) in pkg {
+                            // println!("{} {}", k ,v);
+                            if let Some(v) = v.as_str() {
+                                props.insert(k.clone(), v.to_string());
+                            } else {
+                                println!("package.metadata.winres.{} is not a string", k);
+                            }
                         }
+                    } else {
+                        println!("package.metadata.winres is not a table");
                     }
                 } else {
-                    println!("package.metadata.winres is not a table");
+                    println!("package.metadata.winres does not exist");
                 }
             } else {
-                println!("package.metadata.winres does not exist");
+                println!("package.metadata does not exist");
             }
         } else {
-            println!("package section missing");
+            println!("package does not exist");
         }
     } else {
-        println!("parsing error")
+        println!("TOML parsing error")
     }
     Ok(())
 }
