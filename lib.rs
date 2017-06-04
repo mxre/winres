@@ -20,7 +20,7 @@
 //!        .set("InternalName", "TEST.EXE")
 //!        // manually set version 1.0.0.0
 //!        .set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0001000000000000);
-//!     try!(res.compile());
+//!     res.compile()?;
 //! }
 //! # Ok(())
 //! # }
@@ -90,7 +90,7 @@ pub enum VersionInfo {
 }
 
 pub struct WindowsResource {
-    toolkit_path: String,
+    toolkit_path: PathBuf,
     properties: HashMap<String, String>,
     version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
@@ -185,7 +185,7 @@ impl WindowsResource {
 
         let sdk = match get_sdk() {
             Ok(mut v) => v.pop().unwrap(),
-            Err(_) => String::new(),
+            Err(_) => PathBuf::new(),
         };
 
         WindowsResource {
@@ -236,9 +236,15 @@ impl WindowsResource {
     ///
     /// For MSVC the Windows SDK has to be installed. It comes with the resource compiler
     /// `rc.exe`. This should be set to the root directory of the Windows SDK, e.g.,
-    /// `"C:\Program Files (x86)\Windows Kits\10`
+    /// `"C:\Program Files (x86)\Windows Kits\10"`
+    /// or, if multiple 10 versions are installed
+    /// set it directly to the corret bin directory
+    /// `"C:\Program Files (x86)\Windows Kits\10\bin\10.0.14393.0\x64"`
+    ///
+    /// If it is left unset, it will look up a path in the registry,
+    /// i.e. `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots`
     pub fn set_toolkit_path<'a>(&mut self, path: &'a str) -> &mut Self {
-        self.toolkit_path = path.to_string();
+        self.toolkit_path = PathBuf::from(path);
         self
     }
 
@@ -357,48 +363,48 @@ impl WindowsResource {
 
         // use UTF8 as an encoding
         // this makes it easier, since in rust all string are UTF8
-        try!(writeln!(f, "#pragma code_page(65001)"));
-        try!(writeln!(f, "1 VERSIONINFO"));
+        writeln!(f, "#pragma code_page(65001)")?;
+        writeln!(f, "1 VERSIONINFO")?;
         for (k, v) in self.version_info.iter() {
             match *k {
                 VersionInfo::FILEVERSION |
                 VersionInfo::PRODUCTVERSION => {
-                    try!(writeln!(f,
+                    writeln!(f,
                                   "{:?} {}, {}, {}, {}",
                                   k,
                                   (*v >> 48) as u16,
                                   (*v >> 32) as u16,
                                   (*v >> 16) as u16,
-                                  *v as u16))
+                                  *v as u16)?
                 }
-                _ => try!(writeln!(f, "{:?} {:#x}", k, v)),
+                _ => writeln!(f, "{:?} {:#x}", k, v)?,
             };
         }
-        try!(writeln!(f, "{{\nBLOCK \"StringFileInfo\""));
-        try!(writeln!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{", self.language));
+        writeln!(f, "{{\nBLOCK \"StringFileInfo\"")?;
+        writeln!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{", self.language)?;
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
-                try!(writeln!(f, "VALUE \"{}\", \"{}\"", k, v));
+                writeln!(f, "VALUE \"{}\", \"{}\"", k, v)?;
             }
         }
-        try!(writeln!(f, "}}\n}}"));
+        writeln!(f, "}}\n}}")?;
 
-        try!(writeln!(f, "BLOCK \"VarFileInfo\" {{"));
-        try!(writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language));
-        try!(writeln!(f, "}}\n}}"));
+        writeln!(f, "BLOCK \"VarFileInfo\" {{")?;
+        writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
+        writeln!(f, "}}\n}}")?;
         if self.icon.is_some() {
-            try!(writeln!(f, "1 ICON \"{}\"", self.icon.as_ref().unwrap()));
+            writeln!(f, "1 ICON \"{}\"", self.icon.as_ref().unwrap())?;
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
             if let Some(manf) = self.manifest.as_ref() {
-                try!(writeln!(f, "{} 24", e));
-                try!(writeln!(f, "{{"));
+                writeln!(f, "{} 24", e)?;
+                writeln!(f, "{{")?;
                 for line in manf.lines() {
-                    try!(writeln!(f, "\"{}\"", line.replace("\"", "\"\"").trim()));
+                    writeln!(f, "\"{}\"", line.replace("\"", "\"\"").trim())?;
                 }
-                try!(writeln!(f, "}}"));
+                writeln!(f, "}}")?;
             } else if let Some(manf) = self.manifest_file.as_ref() {
-                try!(writeln!(f, "{} 24 \"{}\"", e, manf));
+                writeln!(f, "{} 24 \"{}\"", e, manf)?;
             }
         }
         Ok(())
@@ -427,23 +433,23 @@ impl WindowsResource {
     fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let output = PathBuf::from(output_dir).join("resource.o");
         let input = PathBuf::from(input);
-        let status = try!(process::Command::new("windres.exe")
+        let status = process::Command::new("windres.exe")
             .current_dir(&self.toolkit_path)
             .arg(format!("-I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             .arg(format!("{}", input.display()))
             .arg(format!("{}", output.display()))
-            .status());
+            .status()?;
         if !status.success() {
             return Err(io::Error::new(io::ErrorKind::Other, "Could not compile resource file"));
         }
 
         let libname = PathBuf::from(output_dir).join("libresource.a");
-        let status = try!(process::Command::new("ar.exe")
+        let status = process::Command::new("ar.exe")
             .current_dir(&self.toolkit_path)
             .arg("rsc")
             .arg(format!("{}", libname.display()))
             .arg(format!("{}", output.display()))
-            .status());
+            .status()?;
         if !status.success() {
             return Err(io::Error::new(io::ErrorKind::Other,
                                       "Could not create static library for resource file"));
@@ -468,38 +474,45 @@ impl WindowsResource {
         let output = PathBuf::from(&self.output_directory);
         let rc = output.join("resource.rc");
         if self.rc_file.is_none() {
-            try!(self.write_resource_file(&rc));
+            self.write_resource_file(&rc)?;
         }
         let rc = if let Some(s) = self.rc_file.as_ref() {
             s.clone()
         } else {
             rc.to_str().unwrap().to_string()
         };
-        try!(self.compile_with_toolkit(rc.as_str(), &self.output_directory));
+        self.compile_with_toolkit(rc.as_str(), &self.output_directory)?;
 
         Ok(())
     }
 
     #[cfg(target_env = "msvc")]
     fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
-        let rc_exe = if cfg!(target_arch = "x86_64") {
-            PathBuf::from(&self.toolkit_path).join("bin\\x64\\rc.exe")
+        let rc_exe = PathBuf::from(&self.toolkit_path).join("rc.exe");
+        let rc_exe = if !rc_exe.exists() {
+            if cfg!(target_arch = "x86_64") {
+                PathBuf::from(&self.toolkit_path).join(r"bin\x64\rc.exe")
+            } else {
+                PathBuf::from(&self.toolkit_path).join(r"bin\x86\rc.exe")
+            }
         } else {
-            PathBuf::from(&self.toolkit_path).join("bin\\x86\\rc.exe")
+            rc_exe
         };
         // let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\um");
         // let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\shared");
         let output = PathBuf::from(output_dir).join("resource.lib");
         let input = PathBuf::from(input);
-        let status = try!(process::Command::new(rc_exe)
+        let status = process::Command::new(rc_exe)
             .arg(format!("/I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             //.arg(format!("/I{}", inc_shared.display()))
             //.arg(format!("/I{}", inc_win.display()))
-            .arg("/nologo")
+            //.arg("/nologo")
             .arg(format!("/fo{}", output.display()))
             .arg(format!("{}", input.display()))
-            .status());
-        if !status.success() {
+            .output()?;
+        println!("RC Output:\n{}\n------", String::from_utf8_lossy(&status.stdout));
+        println!("RC Error:\n{}\n------", String::from_utf8_lossy(&status.stderr));
+        if !status.status.success() {
             return Err(io::Error::new(io::ErrorKind::Other, "Could not compile resource file"));
         }
 
@@ -510,32 +523,49 @@ impl WindowsResource {
 }
 
 /// Find a Windows SDK
-fn get_sdk() -> io::Result<Vec<String>> {
-    let output = try!(process::Command::new("reg")
+fn get_sdk() -> io::Result<Vec<PathBuf>> {
+    // use the reg command, so we don't need a winapi dependency
+    let output = process::Command::new("reg")
         .arg("query")
         .arg(r"HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots")
-        .output());
+        .output()?;
 
-    let lines = try!(String::from_utf8(output.stdout)
-        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.description()))));
-    let mut kits: Vec<String> = Vec::new();
-    for line in lines.lines() {
+    let lines = String::from_utf8(output.stdout)
+        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.description())))?;
+    let mut kits: Vec<PathBuf> = Vec::new();
+    let mut lines: Vec<&str> = lines.lines().collect();
+    lines.reverse();
+    for line in lines {
         if line.trim().starts_with("KitsRoot") {
-            let kit = line.chars()
+            let kit: String = line.chars()
                 .skip(line.find("REG_SZ").unwrap() + 6)
                 .skip_while(|c| c.is_whitespace())
                 .collect();
             
-            let mut p = PathBuf::from(&kit);
-            if cfg!(target_arch = "x86_64") {
-                p.push(r"bin\x64\rc.exe")
+            let p = PathBuf::from(&kit);
+            let rc = if cfg!(target_arch = "x86_64") {
+                p.join(r"bin\x64\rc.exe")
             } else {
-                p.push(r"bin\x86\rc.exe");
+                p.join(r"bin\x86\rc.exe")
+            };
+
+            if rc.exists() {
+                println!("{:?}", rc);
+                kits.push(rc.parent().unwrap().to_owned());
             }
 
-            if p.exists() {
-                println!("{}", kit);
-                kits.push(kit);
+            for ent in p.join("bin").read_dir().unwrap() {
+                if let Ok(e) = ent {
+                    let p = if cfg!(target_arch = "x86_64") {
+                        e.path().join(r"x64\rc.exe")
+                    } else {
+                        e.path().join(r"x86\rc.exe")
+                    };
+                    if p.exists() {
+                        println!("{:?}", p);
+                        kits.push(p.parent().unwrap().to_owned());
+                    }
+                }
             }
         }
     }
@@ -544,9 +574,9 @@ fn get_sdk() -> io::Result<Vec<String>> {
 
 fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
     let cargo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("Cargo.toml");
-    let mut f = try!(fs::File::open(cargo));
+    let mut f = fs::File::open(cargo)?;
     let mut cargo_toml = String::new();
-    try!(f.read_to_string(&mut cargo_toml));
+    f.read_to_string(&mut cargo_toml)?;
     if let Some(ml) = toml::Parser::new(&cargo_toml).parse() {
         if let Some(pkg) = ml.get("package") {
             if let Some(pkg) = pkg.lookup("metadata.winres") {

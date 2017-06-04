@@ -61,7 +61,7 @@ a `cfg` option.
 Another possibility, is using `cfg` as a directive, to avoid building `winres` on unix platforms
 alltogether, this will save build time. So the example from before could look like this
 
-``toml
+```toml
 [package]
 #...
 build = "build.rs"
