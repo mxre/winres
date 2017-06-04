@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/winres/lib.rs.html#1-575' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-0' class='srclink' href='../src/winres/lib.rs.html#1-601' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Rust Windows resource helper</p>
 
 <p>This crate implements a simple generator for Windows resource (.rc) files
@@ -65,7 +65,7 @@ but directs cargo to link the resource compilers output.</p>
        .<span class='ident'>set</span>(<span class='string'>&quot;InternalName&quot;</span>, <span class='string'>&quot;TEST.EXE&quot;</span>)
        <span class='comment'>// manually set version 1.0.0.0</span>
        .<span class='ident'>set_version_info</span>(<span class='ident'>winres</span>::<span class='ident'>VersionInfo</span>::<span class='ident'>PRODUCTVERSION</span>, <span class='number'>0x0001000000000000</span>);
-    <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>res</span>.<span class='ident'>compile</span>());
+    <span class='ident'>res</span>.<span class='ident'>compile</span>()<span class='question-mark'>?</span>;
 }</pre>
 
 <h1 id='defaults' class='section-header'><a href='#defaults'>Defaults</a></h1>

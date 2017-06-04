@@ -617,6 +617,32 @@
 <span id="573">573</span>
 <span id="574">574</span>
 <span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Rust Windows resource helper</span>
 <span class='doccomment'>//!</span>
@@ -640,7 +666,7 @@
 <span class='doccomment'>//!        .set(&quot;InternalName&quot;, &quot;TEST.EXE&quot;)</span>
 <span class='doccomment'>//!        // manually set version 1.0.0.0</span>
 <span class='doccomment'>//!        .set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0001000000000000);</span>
-<span class='doccomment'>//!     try!(res.compile());</span>
+<span class='doccomment'>//!     res.compile()?;</span>
 <span class='doccomment'>//! }</span>
 <span class='doccomment'>//! # Ok(())</span>
 <span class='doccomment'>//! # }</span>
@@ -710,7 +736,7 @@
 }
 
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>WindowsResource</span> {
-    <span class='ident'>toolkit_path</span>: <span class='ident'>String</span>,
+    <span class='ident'>toolkit_path</span>: <span class='ident'>PathBuf</span>,
     <span class='ident'>properties</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>String</span><span class='op'>&gt;</span>,
     <span class='ident'>version_info</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>VersionInfo</span>, <span class='ident'>u64</span><span class='op'>&gt;</span>,
     <span class='ident'>rc_file</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>,
@@ -805,7 +831,7 @@
 
         <span class='kw'>let</span> <span class='ident'>sdk</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>get_sdk</span>() {
             <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>v</span>) <span class='op'>=&gt;</span> <span class='ident'>v</span>.<span class='ident'>pop</span>().<span class='ident'>unwrap</span>(),
-            <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='ident'>String</span>::<span class='ident'>new</span>(),
+            <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='ident'>PathBuf</span>::<span class='ident'>new</span>(),
         };
 
         <span class='ident'>WindowsResource</span> {
@@ -856,9 +882,15 @@
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// For MSVC the Windows SDK has to be installed. It comes with the resource compiler</span>
     <span class='doccomment'>/// `rc.exe`. This should be set to the root directory of the Windows SDK, e.g.,</span>
-    <span class='doccomment'>/// `&quot;C:\Program Files (x86)\Windows Kits\10`</span>
+    <span class='doccomment'>/// `&quot;C:\Program Files (x86)\Windows Kits\10&quot;`</span>
+    <span class='doccomment'>/// or, if multiple 10 versions are installed</span>
+    <span class='doccomment'>/// set it directly to the corret bin directory</span>
+    <span class='doccomment'>/// `&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.14393.0\x64&quot;`</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// If it is left unset, it will look up a path in the registry,</span>
+    <span class='doccomment'>/// i.e. `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots`</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set_toolkit_path</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>path</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>toolkit_path</span> <span class='op'>=</span> <span class='ident'>path</span>.<span class='ident'>to_string</span>();
+        <span class='self'>self</span>.<span class='ident'>toolkit_path</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>path</span>);
         <span class='self'>self</span>
     }
 
@@ -935,7 +967,7 @@
     <span class='doccomment'>/// # Example</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// The following manifest will brand the exe as requesting administrator privileges.</span>
-    <span class='doccomment'>/// Thus every time it is executed, a Windows UAC dialog will apear.</span>
+    <span class='doccomment'>/// Thus everytime it is executed, a Windows UAC dialog will appear.</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// ```rust</span>
     <span class='doccomment'>/// let mut res = winres::WindowsResource::new();</span>
@@ -977,48 +1009,48 @@
 
         <span class='comment'>// use UTF8 as an encoding</span>
         <span class='comment'>// this makes it easier, since in rust all string are UTF8</span>
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;#pragma code_page(65001)&quot;</span>));
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;1 VERSIONINFO&quot;</span>));
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;#pragma code_page(65001)&quot;</span>)<span class='question-mark'>?</span>;
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;1 VERSIONINFO&quot;</span>)<span class='question-mark'>?</span>;
         <span class='kw'>for</span> (<span class='ident'>k</span>, <span class='ident'>v</span>) <span class='kw'>in</span> <span class='self'>self</span>.<span class='ident'>version_info</span>.<span class='ident'>iter</span>() {
             <span class='kw'>match</span> <span class='op'>*</span><span class='ident'>k</span> {
                 <span class='ident'>VersionInfo</span>::<span class='ident'>FILEVERSION</span> <span class='op'>|</span>
                 <span class='ident'>VersionInfo</span>::<span class='ident'>PRODUCTVERSION</span> <span class='op'>=&gt;</span> {
-                    <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>,
+                    <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>,
                                   <span class='string'>&quot;{:?} {}, {}, {}, {}&quot;</span>,
                                   <span class='ident'>k</span>,
                                   (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>48</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
                                   (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>32</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
                                   (<span class='op'>*</span><span class='ident'>v</span> <span class='op'>&gt;&gt;</span> <span class='number'>16</span>) <span class='kw'>as</span> <span class='ident'>u16</span>,
-                                  <span class='op'>*</span><span class='ident'>v</span> <span class='kw'>as</span> <span class='ident'>u16</span>))
+                                  <span class='op'>*</span><span class='ident'>v</span> <span class='kw'>as</span> <span class='ident'>u16</span>)<span class='question-mark'>?</span>
                 }
-                _ <span class='op'>=&gt;</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{:?} {:#x}&quot;</span>, <span class='ident'>k</span>, <span class='ident'>v</span>)),
+                _ <span class='op'>=&gt;</span> <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{:?} {:#x}&quot;</span>, <span class='ident'>k</span>, <span class='ident'>v</span>)<span class='question-mark'>?</span>,
             };
         }
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{\nBLOCK \&quot;StringFileInfo\&quot;&quot;</span>));
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{\nBLOCK \&quot;{:04x}04b0\&quot;\n{{&quot;</span>, <span class='self'>self</span>.<span class='ident'>language</span>));
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{\nBLOCK \&quot;StringFileInfo\&quot;&quot;</span>)<span class='question-mark'>?</span>;
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{\nBLOCK \&quot;{:04x}04b0\&quot;\n{{&quot;</span>, <span class='self'>self</span>.<span class='ident'>language</span>)<span class='question-mark'>?</span>;
         <span class='kw'>for</span> (<span class='ident'>k</span>, <span class='ident'>v</span>) <span class='kw'>in</span> <span class='self'>self</span>.<span class='ident'>properties</span>.<span class='ident'>iter</span>() {
             <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>v</span>.<span class='ident'>is_empty</span>() {
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;VALUE \&quot;{}\&quot;, \&quot;{}\&quot;&quot;</span>, <span class='ident'>k</span>, <span class='ident'>v</span>));
+                <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;VALUE \&quot;{}\&quot;, \&quot;{}\&quot;&quot;</span>, <span class='ident'>k</span>, <span class='ident'>v</span>)<span class='question-mark'>?</span>;
             }
         }
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}\n}}&quot;</span>));
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}\n}}&quot;</span>)<span class='question-mark'>?</span>;
 
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;BLOCK \&quot;VarFileInfo\&quot; {{&quot;</span>));
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;VALUE \&quot;Translation\&quot;, {:#x}, 0x04b0&quot;</span>, <span class='self'>self</span>.<span class='ident'>language</span>));
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}\n}}&quot;</span>));
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;BLOCK \&quot;VarFileInfo\&quot; {{&quot;</span>)<span class='question-mark'>?</span>;
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;VALUE \&quot;Translation\&quot;, {:#x}, 0x04b0&quot;</span>, <span class='self'>self</span>.<span class='ident'>language</span>)<span class='question-mark'>?</span>;
+        <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}\n}}&quot;</span>)<span class='question-mark'>?</span>;
         <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>icon</span>.<span class='ident'>is_some</span>() {
-            <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;1 ICON \&quot;{}\&quot;&quot;</span>, <span class='self'>self</span>.<span class='ident'>icon</span>.<span class='ident'>as_ref</span>().<span class='ident'>unwrap</span>()));
+            <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;1 ICON \&quot;{}\&quot;&quot;</span>, <span class='self'>self</span>.<span class='ident'>icon</span>.<span class='ident'>as_ref</span>().<span class='ident'>unwrap</span>())<span class='question-mark'>?</span>;
         }
         <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>e</span>) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>version_info</span>.<span class='ident'>get</span>(<span class='kw-2'>&amp;</span><span class='ident'>VersionInfo</span>::<span class='ident'>FILETYPE</span>) {
             <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>manf</span>) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>manifest</span>.<span class='ident'>as_ref</span>() {
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{} 24&quot;</span>, <span class='ident'>e</span>));
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{&quot;</span>));
+                <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{} 24&quot;</span>, <span class='ident'>e</span>)<span class='question-mark'>?</span>;
+                <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{{&quot;</span>)<span class='question-mark'>?</span>;
                 <span class='kw'>for</span> <span class='ident'>line</span> <span class='kw'>in</span> <span class='ident'>manf</span>.<span class='ident'>lines</span>() {
-                    <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;\&quot;{}\&quot;&quot;</span>, <span class='ident'>line</span>.<span class='ident'>replace</span>(<span class='string'>&quot;\&quot;&quot;</span>, <span class='string'>&quot;\&quot;\&quot;&quot;</span>).<span class='ident'>trim</span>()));
+                    <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;\&quot;{}\&quot;&quot;</span>, <span class='ident'>line</span>.<span class='ident'>replace</span>(<span class='string'>&quot;\&quot;&quot;</span>, <span class='string'>&quot;\&quot;\&quot;&quot;</span>).<span class='ident'>trim</span>())<span class='question-mark'>?</span>;
                 }
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}&quot;</span>));
+                <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;}}&quot;</span>)<span class='question-mark'>?</span>;
             } <span class='kw'>else</span> <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>manf</span>) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>manifest_file</span>.<span class='ident'>as_ref</span>() {
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{} 24 \&quot;{}\&quot;&quot;</span>, <span class='ident'>e</span>, <span class='ident'>manf</span>));
+                <span class='macro'>writeln</span><span class='macro'>!</span>(<span class='ident'>f</span>, <span class='string'>&quot;{} 24 \&quot;{}\&quot;&quot;</span>, <span class='ident'>e</span>, <span class='ident'>manf</span>)<span class='question-mark'>?</span>;
             }
         }
         <span class='prelude-val'>Ok</span>(())
@@ -1047,23 +1079,23 @@
     <span class='kw'>fn</span> <span class='ident'>compile_with_toolkit</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>input</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>, <span class='ident'>output_dir</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>output_dir</span>).<span class='ident'>join</span>(<span class='string'>&quot;resource.o&quot;</span>);
         <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>input</span>);
-        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;windres.exe&quot;</span>)
+        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;windres.exe&quot;</span>)
             .<span class='ident'>current_dir</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>)
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;-I{}&quot;</span>, <span class='ident'>env</span>::<span class='ident'>var</span>(<span class='string'>&quot;CARGO_MANIFEST_DIR&quot;</span>).<span class='ident'>unwrap</span>()))
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>input</span>.<span class='ident'>display</span>()))
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>output</span>.<span class='ident'>display</span>()))
-            .<span class='ident'>status</span>());
+            .<span class='ident'>status</span>()<span class='question-mark'>?</span>;
         <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>status</span>.<span class='ident'>success</span>() {
             <span class='kw'>return</span> <span class='prelude-val'>Err</span>(<span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>, <span class='string'>&quot;Could not compile resource file&quot;</span>));
         }
 
         <span class='kw'>let</span> <span class='ident'>libname</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>output_dir</span>).<span class='ident'>join</span>(<span class='string'>&quot;libresource.a&quot;</span>);
-        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;ar.exe&quot;</span>)
+        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;ar.exe&quot;</span>)
             .<span class='ident'>current_dir</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>)
             .<span class='ident'>arg</span>(<span class='string'>&quot;rsc&quot;</span>)
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>libname</span>.<span class='ident'>display</span>()))
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>output</span>.<span class='ident'>display</span>()))
-            .<span class='ident'>status</span>());
+            .<span class='ident'>status</span>()<span class='question-mark'>?</span>;
         <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>status</span>.<span class='ident'>success</span>() {
             <span class='kw'>return</span> <span class='prelude-val'>Err</span>(<span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>,
                                       <span class='string'>&quot;Could not create static library for resource file&quot;</span>));
@@ -1088,37 +1120,42 @@
         <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>output_directory</span>);
         <span class='kw'>let</span> <span class='ident'>rc</span> <span class='op'>=</span> <span class='ident'>output</span>.<span class='ident'>join</span>(<span class='string'>&quot;resource.rc&quot;</span>);
         <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>rc_file</span>.<span class='ident'>is_none</span>() {
-            <span class='macro'>try</span><span class='macro'>!</span>(<span class='self'>self</span>.<span class='ident'>write_resource_file</span>(<span class='kw-2'>&amp;</span><span class='ident'>rc</span>));
+            <span class='self'>self</span>.<span class='ident'>write_resource_file</span>(<span class='kw-2'>&amp;</span><span class='ident'>rc</span>)<span class='question-mark'>?</span>;
         }
         <span class='kw'>let</span> <span class='ident'>rc</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>s</span>) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>rc_file</span>.<span class='ident'>as_ref</span>() {
             <span class='ident'>s</span>.<span class='ident'>clone</span>()
         } <span class='kw'>else</span> {
             <span class='ident'>rc</span>.<span class='ident'>to_str</span>().<span class='ident'>unwrap</span>().<span class='ident'>to_string</span>()
         };
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='self'>self</span>.<span class='ident'>compile_with_toolkit</span>(<span class='ident'>rc</span>.<span class='ident'>as_str</span>(), <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>output_directory</span>));
+        <span class='self'>self</span>.<span class='ident'>compile_with_toolkit</span>(<span class='ident'>rc</span>.<span class='ident'>as_str</span>(), <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>output_directory</span>)<span class='question-mark'>?</span>;
 
         <span class='prelude-val'>Ok</span>(())
     }
 
     <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>target_env</span> <span class='op'>=</span> <span class='string'>&quot;msvc&quot;</span>)]</span>
     <span class='kw'>fn</span> <span class='ident'>compile_with_toolkit</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>input</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>, <span class='ident'>output_dir</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
-        <span class='kw'>let</span> <span class='ident'>rc_exe</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='macro'>cfg</span><span class='macro'>!</span>(<span class='ident'>target_arch</span> <span class='op'>=</span> <span class='string'>&quot;x86_64&quot;</span>) {
-            <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>).<span class='ident'>join</span>(<span class='string'>&quot;bin\\x64\\rc.exe&quot;</span>)
+        <span class='kw'>let</span> <span class='ident'>rc_exe</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>).<span class='ident'>join</span>(<span class='string'>&quot;rc.exe&quot;</span>);
+        <span class='kw'>let</span> <span class='ident'>rc_exe</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>rc_exe</span>.<span class='ident'>exists</span>() {
+            <span class='kw'>if</span> <span class='macro'>cfg</span><span class='macro'>!</span>(<span class='ident'>target_arch</span> <span class='op'>=</span> <span class='string'>&quot;x86_64&quot;</span>) {
+                <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>).<span class='ident'>join</span>(<span class='string'>r&quot;bin\x64\rc.exe&quot;</span>)
+            } <span class='kw'>else</span> {
+                <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>).<span class='ident'>join</span>(<span class='string'>r&quot;bin\x86\rc.exe&quot;</span>)
+            }
         } <span class='kw'>else</span> {
-            <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>toolkit_path</span>).<span class='ident'>join</span>(<span class='string'>&quot;bin\\x86\\rc.exe&quot;</span>)
+            <span class='ident'>rc_exe</span>
         };
         <span class='comment'>// let inc_win = PathBuf::from(&amp;self.toolkit_path).join(&quot;Include\\10.0.10586.0\\um&quot;);</span>
         <span class='comment'>// let inc_shared = PathBuf::from(&amp;self.toolkit_path).join(&quot;Include\\10.0.10586.0\\shared&quot;);</span>
         <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>output_dir</span>).<span class='ident'>join</span>(<span class='string'>&quot;resource.lib&quot;</span>);
         <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>PathBuf</span>::<span class='ident'>from</span>(<span class='ident'>input</span>);
-        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='ident'>rc_exe</span>)
+        <span class='kw'>let</span> <span class='ident'>status</span> <span class='op'>=</span> <span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='ident'>rc_exe</span>)
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;/I{}&quot;</span>, <span class='ident'>env</span>::<span class='ident'>var</span>(<span class='string'>&quot;CARGO_MANIFEST_DIR&quot;</span>).<span class='ident'>unwrap</span>()))
             <span class='comment'>//.arg(format!(&quot;/I{}&quot;, inc_shared.display()))</span>
             <span class='comment'>//.arg(format!(&quot;/I{}&quot;, inc_win.display()))</span>
             .<span class='ident'>arg</span>(<span class='string'>&quot;/nologo&quot;</span>)
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;/fo{}&quot;</span>, <span class='ident'>output</span>.<span class='ident'>display</span>()))
             .<span class='ident'>arg</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>input</span>.<span class='ident'>display</span>()))
-            .<span class='ident'>status</span>());
+            .<span class='ident'>status</span>()<span class='question-mark'>?</span>;
         <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>status</span>.<span class='ident'>success</span>() {
             <span class='kw'>return</span> <span class='prelude-val'>Err</span>(<span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>, <span class='string'>&quot;Could not compile resource file&quot;</span>));
         }
@@ -1130,18 +1167,19 @@
 }
 
 <span class='doccomment'>/// Find a Windows SDK</span>
-<span class='kw'>fn</span> <span class='ident'>get_sdk</span>() <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;&gt;</span> {
-    <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;reg&quot;</span>)
+<span class='kw'>fn</span> <span class='ident'>get_sdk</span>() <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>PathBuf</span><span class='op'>&gt;&gt;</span> {
+    <span class='comment'>// use the reg command, so we don&#39;t need a winapi dependency</span>
+    <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;reg&quot;</span>)
         .<span class='ident'>arg</span>(<span class='string'>&quot;query&quot;</span>)
         .<span class='ident'>arg</span>(<span class='string'>r&quot;HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots&quot;</span>)
-        .<span class='ident'>output</span>());
+        .<span class='ident'>output</span>()<span class='question-mark'>?</span>;
 
-    <span class='kw'>let</span> <span class='ident'>lines</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>output</span>.<span class='ident'>stdout</span>)
-        .<span class='ident'>or_else</span>(<span class='op'>|</span><span class='ident'>e</span><span class='op'>|</span> <span class='prelude-val'>Err</span>(<span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>, <span class='ident'>e</span>.<span class='ident'>description</span>()))));
-    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>kits</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
+    <span class='kw'>let</span> <span class='ident'>lines</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>output</span>.<span class='ident'>stdout</span>)
+        .<span class='ident'>or_else</span>(<span class='op'>|</span><span class='ident'>e</span><span class='op'>|</span> <span class='prelude-val'>Err</span>(<span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>, <span class='ident'>e</span>.<span class='ident'>description</span>())))<span class='question-mark'>?</span>;
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>kits</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>PathBuf</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
     <span class='kw'>for</span> <span class='ident'>line</span> <span class='kw'>in</span> <span class='ident'>lines</span>.<span class='ident'>lines</span>() {
         <span class='kw'>if</span> <span class='ident'>line</span>.<span class='ident'>trim</span>().<span class='ident'>starts_with</span>(<span class='string'>&quot;KitsRoot&quot;</span>) {
-            <span class='kw'>let</span> <span class='ident'>kit</span> <span class='op'>=</span> <span class='ident'>line</span>.<span class='ident'>chars</span>()
+            <span class='kw'>let</span> <span class='ident'>kit</span>: <span class='ident'>String</span> <span class='op'>=</span> <span class='ident'>line</span>.<span class='ident'>chars</span>()
                 .<span class='ident'>skip</span>(<span class='ident'>line</span>.<span class='ident'>find</span>(<span class='string'>&quot;REG_SZ&quot;</span>).<span class='ident'>unwrap</span>() <span class='op'>+</span> <span class='number'>6</span>)
                 .<span class='ident'>skip_while</span>(<span class='op'>|</span><span class='ident'>c</span><span class='op'>|</span> <span class='ident'>c</span>.<span class='ident'>is_whitespace</span>())
                 .<span class='ident'>collect</span>();
@@ -1153,9 +1191,23 @@
                 <span class='ident'>p</span>.<span class='ident'>push</span>(<span class='string'>r&quot;bin\x86\rc.exe&quot;</span>);
             }
 
-            <span class='kw'>if</span> <span class='ident'>p</span>.<span class='ident'>exists</span>() {
-                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>kit</span>);
-                <span class='ident'>kits</span>.<span class='ident'>push</span>(<span class='ident'>kit</span>);
+            <span class='kw'>if</span> <span class='op'>!</span><span class='ident'>p</span>.<span class='ident'>exists</span>() {
+                <span class='kw'>for</span> <span class='ident'>ent</span> <span class='kw'>in</span> <span class='ident'>p</span>.<span class='ident'>join</span>(<span class='string'>&quot;bin&quot;</span>).<span class='ident'>read_dir</span>().<span class='ident'>unwrap</span>() {
+                    <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='ident'>e</span>) <span class='op'>=</span> <span class='ident'>ent</span> {
+                        <span class='kw'>let</span> <span class='ident'>p</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='macro'>cfg</span><span class='macro'>!</span>(<span class='ident'>target_arch</span> <span class='op'>=</span> <span class='string'>&quot;x86_64&quot;</span>) {
+                            <span class='ident'>e</span>.<span class='ident'>path</span>().<span class='ident'>join</span>(<span class='string'>r&quot;x64\rc.exe&quot;</span>)
+                        } <span class='kw'>else</span> {
+                            <span class='ident'>e</span>.<span class='ident'>path</span>().<span class='ident'>join</span>(<span class='string'>r&quot;x86\rc.exe&quot;</span>)
+                        };
+                        <span class='kw'>if</span> <span class='ident'>p</span>.<span class='ident'>exists</span>() {
+                            <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{:?}&quot;</span>, <span class='ident'>p</span>);
+                            <span class='ident'>kits</span>.<span class='ident'>push</span>(<span class='ident'>p</span>.<span class='ident'>parent</span>().<span class='ident'>unwrap</span>().<span class='ident'>to_owned</span>());
+                        }
+                    }
+                }
+            } <span class='kw'>else</span> {
+                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{:?}&quot;</span>, <span class='ident'>p</span>);
+                <span class='ident'>kits</span>.<span class='ident'>push</span>(<span class='ident'>p</span>.<span class='ident'>parent</span>().<span class='ident'>unwrap</span>().<span class='ident'>to_owned</span>());
             }
         }
     }
@@ -1164,9 +1216,9 @@
 
 <span class='kw'>fn</span> <span class='ident'>parse_cargo_toml</span>(<span class='ident'>props</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>String</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
     <span class='kw'>let</span> <span class='ident'>cargo</span> <span class='op'>=</span> <span class='ident'>Path</span>::<span class='ident'>new</span>(<span class='kw-2'>&amp;</span><span class='ident'>env</span>::<span class='ident'>var</span>(<span class='string'>&quot;CARGO_MANIFEST_DIR&quot;</span>).<span class='ident'>unwrap</span>()).<span class='ident'>join</span>(<span class='string'>&quot;Cargo.toml&quot;</span>);
-    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>f</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>fs</span>::<span class='ident'>File</span>::<span class='ident'>open</span>(<span class='ident'>cargo</span>));
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>f</span> <span class='op'>=</span> <span class='ident'>fs</span>::<span class='ident'>File</span>::<span class='ident'>open</span>(<span class='ident'>cargo</span>)<span class='question-mark'>?</span>;
     <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>cargo_toml</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>new</span>();
-    <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>f</span>.<span class='ident'>read_to_string</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cargo_toml</span>));
+    <span class='ident'>f</span>.<span class='ident'>read_to_string</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cargo_toml</span>)<span class='question-mark'>?</span>;
     <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>ml</span>) <span class='op'>=</span> <span class='ident'>toml</span>::<span class='ident'>Parser</span>::<span class='ident'>new</span>(<span class='kw-2'>&amp;</span><span class='ident'>cargo_toml</span>).<span class='ident'>parse</span>() {
         <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>pkg</span>) <span class='op'>=</span> <span class='ident'>ml</span>.<span class='ident'>get</span>(<span class='string'>&quot;package&quot;</span>) {
             <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>pkg</span>) <span class='op'>=</span> <span class='ident'>pkg</span>.<span class='ident'>lookup</span>(<span class='string'>&quot;metadata.winres&quot;</span>) {
