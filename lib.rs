@@ -78,6 +78,7 @@ pub enum VersionInfo {
     FILEFLAGS,
 }
 
+#[derive(Debug)]
 pub struct WindowsResource {
     toolkit_path: PathBuf,
     properties: HashMap<String, String>,
