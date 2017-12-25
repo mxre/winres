@@ -183,9 +183,13 @@ impl WindowsResource {
         ver.insert(VersionInfo::FILEFLAGSMASK, 0x3F);
         ver.insert(VersionInfo::FILEFLAGS, 0);
 
-        let sdk = match get_sdk() {
-            Ok(mut v) => v.pop().unwrap(),
-            Err(_) => PathBuf::new(),
+        let sdk = if cfg!(target_env = "msvc") {
+            match get_sdk() {
+                Ok(mut v) => v.pop().unwrap(),
+                Err(_) => PathBuf::new(),
+            }
+        } else {
+            PathBuf::from("\\")
         };
 
         WindowsResource {
