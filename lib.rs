@@ -56,17 +56,6 @@ use std::error::Error;
 
 extern crate toml;
 
-/// The compiler version defines which toolkit we have to use.
-/// The value is defined by the value of `cfg!(target_env=)`
-pub enum Toolkit {
-    /// use Microsoft Visual C and Windows SDK
-    MSVC,
-    /// use GNU Bintools
-    GNU,
-    /// neiter `cfg!(target_env="msvc")` nor `cfg!(target_env="gnu")` was set.
-    Unknown,
-}
-
 /// Version info field names
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum VersionInfo {
@@ -89,6 +78,7 @@ pub enum VersionInfo {
     FILEFLAGS,
 }
 
+#[derive(Debug)]
 pub struct WindowsResource {
     toolkit_path: PathBuf,
     properties: HashMap<String, String>,
@@ -102,15 +92,6 @@ pub struct WindowsResource {
 }
 
 impl WindowsResource {
-    pub fn toolkit() -> Toolkit {
-        if cfg!(target_env = "gnu") {
-            Toolkit::GNU
-        } else if cfg!(target_env = "msvc") {
-            Toolkit::MSVC
-        } else {
-            Toolkit::Unknown
-        }
-    }
 
     /// Create a new resource with version info struct
     ///
@@ -183,9 +164,13 @@ impl WindowsResource {
         ver.insert(VersionInfo::FILEFLAGSMASK, 0x3F);
         ver.insert(VersionInfo::FILEFLAGS, 0);
 
-        let sdk = match get_sdk() {
-            Ok(mut v) => v.pop().unwrap(),
-            Err(_) => PathBuf::new(),
+        let sdk = if cfg!(target_env = "msvc") {
+            match get_sdk() {
+                Ok(mut v) => v.pop().unwrap(),
+                Err(_) => PathBuf::new(),
+            }
+        } else {
+            PathBuf::from("\\")
         };
 
         WindowsResource {
