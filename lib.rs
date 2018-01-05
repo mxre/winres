@@ -245,19 +245,19 @@ impl WindowsResource {
     ///   if cfg!(target_os = "windows") {
     ///     let mut res = winres::WindowsResource::new();
     /// #   res.set_output_directory(".");
-    ///     res.set_language(winapi::winnt::MAKELANGID(
-    ///         winapi::winnt::LANG_ENGLISH,
-    ///         winapi::winnt::SUBLANG_ENGLISH_US
+    ///     res.set_language(winapi::um::winnt::MAKELANGID(
+    ///         winapi::um::winnt::LANG_ENGLISH,
+    ///         winapi::um::winnt::SUBLANG_ENGLISH_US
     ///     ));
     ///     res.compile().unwrap();
     ///   }
     /// }
     /// ```
-    /// For possible values look at the `winapi::winnt` contants, specificaly those,
-    /// starting with `LANG_` and `SUBLANG`.
+    /// For possible values look at the `winapi::um::winnt` contants, specificaly those,
+    /// starting with `LANG_` and `SUBLANG_`.
     ///
-    /// [`make_language_id!`]: macro.make_language_id.html
-    /// [`winapi::winnt`]: https://retep998.github.io/doc/winapi/winnt/#constants
+    /// [`MAKELANGID`]: https://docs.rs/winapi/0.3/x86_64-pc-windows-msvc/winapi/um/winnt/fn.MAKELANGID.html
+    /// [`winapi::um::winnt`]: https://docs.rs/winapi/0.3/x86_64-pc-windows-msvc/winapi/um/winnt/index.html#constants
     ///
     /// # Table
     /// Sometimes it is just simpler to specify the numeric constant directly
