@@ -3,7 +3,7 @@
 A simple library to facilitate adding metainformation and icons to windows
 executables and dynamic libraries.
 
-[Documentation](https://mxre.github.io/winres)
+[Documentation](https://docs.rs/winres/*/winres/)
 
 ## Toolkit
 

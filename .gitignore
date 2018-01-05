@@ -1,8 +1,9 @@
 /.idea/
 /target/
+/example/target
 .editorconfig
 Cargo.lock
 *~
 *.bk
-*.lib
-*.rc
+/*.lib
+/*.rc
