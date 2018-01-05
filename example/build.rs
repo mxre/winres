@@ -12,9 +12,9 @@ fn main() {
         let mut res = winres::WindowsResource::new();
         res.set_icon("icon.ico")
            .set_language(
-               winapi::winnt::MAKELANGID(
-                   winapi::winnt::LANG_ENGLISH,
-                   winapi::winnt::SUBLANG_ENGLISH_US
+               winapi::um::winnt::MAKELANGID(
+                   winapi::um::winnt::LANG_ENGLISH,
+                   winapi::um::winnt::SUBLANG_ENGLISH_US
                 )
             )
            .set_manifest_file("manifest.xml");
