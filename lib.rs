@@ -3,9 +3,9 @@
 //! This crate implements a simple generator for Windows resource (.rc) files
 //! for use with either Microsoft `rc.exe` resource compiler or with GNU `windres.exe`
 //!
-//! The [`WindowsResorce::compile()`] method is inteded to be used from a build script and
+//! The [`WindowsResorce::compile()`] method is intended to be used from a build script and
 //! needs environment variables from cargo to be set. It not only compiles the resource
-//! but directs cargo to link the resource compilers output.
+//! but directs cargo to link the resource compiler's output.
 //!
 //! # Example
 //!
@@ -29,8 +29,8 @@
 //! # Defaults
 //!
 //! We try to guess some sensible default values from Cargo's build time environement variables
-//! This is described in [`WindowsResource::new()`]. Further more we have to know there to find the
-//! resource compiler for the MSVC Toolkit this can be done by looking up a registry key but
+//! This is described in [`WindowsResource::new()`]. Furthermore we have to know where to find the
+//! resource compiler for the MSVC Toolkit. This can be done by looking up a registry key but
 //! for MinGW this has to be done manually.
 //!
 //! The following paths are the hardcoded defaults:
@@ -109,10 +109,10 @@ impl WindowsResource {
     /// in `Cargo.toml` it will be parsed. Values in this section take precedence
     /// over the values provided natively by cargo. Only the string table
     /// of the version struct can be set this way.
-    /// Additionally, the language field is set to neutral (i.e. `0`),
+    /// Additionally, the language field is set to neutral (i.e. `0`)
     /// and no icon is set. These settings have to be done programmatically.
     ///
-    /// `Cargo.toml` files have to be written in UTF-8, we support all valid UTF-8 strings
+    /// `Cargo.toml` files have to be written in UTF-8, so we support all valid UTF-8 strings
     /// provided.
     ///
     /// ```,toml
@@ -206,7 +206,7 @@ impl WindowsResource {
     /// which should only be set, when the `FILEFLAGS` property is set to
     /// `VS_FF_PRIVATEBUILD(0x08)` or `VS_FF_SPECIALBUILD(0x20)`
     ///
-    /// It is possible to use arbirtrary field names, but Windows Explorer and other
+    /// It is possible to use arbirtrary field names but Windows Explorer and other
     /// tools might not show them.
     pub fn set<'a>(&mut self, name: &'a str, value: &'a str) -> &mut Self {
         self.properties.insert(name.to_string(), value.to_string());
@@ -222,7 +222,7 @@ impl WindowsResource {
     /// For MSVC the Windows SDK has to be installed. It comes with the resource compiler
     /// `rc.exe`. This should be set to the root directory of the Windows SDK, e.g.,
     /// `"C:\Program Files (x86)\Windows Kits\10"`
-    /// or, if multiple 10 versions are installed
+    /// or, if multiple 10 versions are installed,
     /// set it directly to the corret bin directory
     /// `"C:\Program Files (x86)\Windows Kits\10\bin\10.0.14393.0\x64"`
     ///
@@ -253,7 +253,7 @@ impl WindowsResource {
     ///   }
     /// }
     /// ```
-    /// For possible values look at the `winapi::um::winnt` contants, specificaly those,
+    /// For possible values look at the `winapi::um::winnt` constants, specifically those
     /// starting with `LANG_` and `SUBLANG_`.
     ///
     /// [`MAKELANGID`]: https://docs.rs/winapi/0.3/x86_64-pc-windows-msvc/winapi/um/winnt/fn.MAKELANGID.html
@@ -262,7 +262,7 @@ impl WindowsResource {
     /// # Table
     /// Sometimes it is just simpler to specify the numeric constant directly
     /// (That is what most `.rc` files do).
-    /// For possible values take a look at the MSDN page for resource files,
+    /// For possible values take a look at the MSDN page for resource files;
     /// we only listed some values here.
     ///
     /// | Language            | Value    |
@@ -295,7 +295,7 @@ impl WindowsResource {
     }
 
     /// Set a version info struct property
-    /// Currently we only support numeric values, you have to look them up.
+    /// Currently we only support numeric values; you have to look them up.
     pub fn set_version_info(&mut self, field: VersionInfo, value: u64) -> &mut Self {
         self.version_info.insert(field, value);
         self
@@ -306,7 +306,7 @@ impl WindowsResource {
     /// # Example
     ///
     /// The following manifest will brand the exe as requesting administrator privileges.
-    /// Thus everytime it is executed, a Windows UAC dialog will appear.
+    /// Thus, everytime it is executed, a Windows UAC dialog will appear.
     ///
     /// ```rust
     /// let mut res = winres::WindowsResource::new();
@@ -347,7 +347,7 @@ impl WindowsResource {
         // try!(write!(f, "#include <winver.h>\n"));
 
         // use UTF8 as an encoding
-        // this makes it easier, since in rust all string are UTF8
+        // this makes it easier since in rust all string are UTF8
         writeln!(f, "#pragma code_page(65001)")?;
         writeln!(f, "1 VERSIONINFO")?;
         for (k, v) in self.version_info.iter() {
@@ -407,7 +407,7 @@ impl WindowsResource {
 
     /// Override the output directoy.
     ///
-    /// As a default, we use `%OUT_DIR%` set by cargo, but it can be necessary to override the
+    /// As a default, we use `%OUT_DIR%` set by cargo, but it may be necessary to override the
     /// the setting.
     pub fn set_output_directory<'a>(&mut self, path: &'a str) -> &mut Self {
         self.output_directory = path.to_string();
@@ -448,7 +448,7 @@ impl WindowsResource {
 
     /// Run the resource compiler
     ///
-    /// This function generates a resource file from the settings, or
+    /// This function generates a resource file from the settings or
     /// uses an existing resource file and passes it to the resource compiler
     /// of your toolkit.
     ///
