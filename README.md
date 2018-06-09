@@ -14,7 +14,7 @@ Before we begin you need to have the approptiate tools installed.
 [Windows SDK]: https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk
 [minGW64]: http://mingw-w64.org
 
-If you are using Rust with the MSVC ABI you will need the Windows SDK,
+If you are using Rust with the MSVC ABI you will need the Windows SDK
 for the GNU ABI you'll need minGW64.
 
 Windows SDK can be found in the registry, minGW64 has to be in the path.
@@ -51,15 +51,15 @@ fn main() {
 ```
 
 Thats it. The file `test.ico` should be located in the same directory as `build.rs`.
-Metainformation, like program version and description are taken from `Cargo.toml`'s `[package]`
+Metainformation (like program version and description) is taken from `Cargo.toml`'s `[package]`
 section.
 
-Note that using this crate on non windows platform is undefined behavoir. It does not cointain,
-saveguards against doing so, none the less it will compile, but `build.rs`, as shown above shoud contain
+Note that using this crate on non windows platform is undefined behavior. It does not contain
+safeguards against doing so. None-the-less it will compile; however `build.rs`, as shown above, should contain
 a `cfg` option.
 
-Another possibility, is using `cfg` as a directive, to avoid building `winres` on unix platforms
-alltogether, this will save build time. So the example from before could look like this
+Another possibility is using `cfg` as a directive to avoid building `winres` on unix platforms
+alltogether. This will save build time. So the example from before could look like this
 
 ```toml
 [package]
@@ -105,7 +105,7 @@ LegalCopyright = "Copyright © 2016"
 This section may contain arbitrary string key-value pairs, to be included
 in the version info section of the executable/library file.
 
-Some keys have special meanings, and will be shown in the file properties
+The following keys have special meanings and will be shown in the file properties
 of the Windows Explorer:
 
 `FileDescription`, `ProductName`, `ProductVersion`, `OriginalFilename` and `LegalCopyright`
@@ -117,7 +117,7 @@ for more details on the version info section of executables/libraries.
 
 ## About this project
 
-I've written this crate chiefly for my personal projects, and although I've tested it
+I've written this crate chiefly for my personal projects and although I've tested it
 on my personal computers I have no idea if the behaviour is the same everywhere.
 
 To be brief, I'm very much reliant on your bug reports and feature suggestions
