@@ -539,8 +539,8 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
                 kits.push(rc.parent().unwrap().to_owned());
             }
 
-            for ent in p.join("bin").read_dir().unwrap() {
-                if let Ok(e) = ent {
+            if let Ok(bin) = p.join("bin").read_dir() {
+                for e in bin.filter_map(|e| e.ok())  {
                     let p = if cfg!(target_arch = "x86_64") {
                         e.path().join(r"x64\rc.exe")
                     } else {
