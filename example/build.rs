@@ -3,6 +3,7 @@ extern crate winres;
 #[cfg(target_os = "windows")]
 extern crate winapi;
 
+// only build for windows
 #[cfg(target_os = "windows")]
 fn main() {
     use std::io::Write;
@@ -28,6 +29,7 @@ fn main() {
     }
 }
 
+// nothing to do for other operating systems
 #[cfg(not(target_os = "windows"))]
 fn main() {
 }
