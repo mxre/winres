@@ -505,6 +505,11 @@ impl WindowsResource {
         println!("cargo:rustc-link-lib=dylib={}", "resource");
         Ok(())
     }
+
+    #[cfg(not(any(target_env = "gnu", target_env = "msvc")))]
+    fn compile_with_toolkit<'a>(&self, _input: &'a str, _output_dir: &'a str) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Other, "Can only compile resource file when target_env is \"gnu\" or \"msvc\""))
+    }
 }
 
 /// Find a Windows SDK
