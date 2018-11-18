@@ -369,7 +369,7 @@ impl WindowsResource {
         writeln!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{", self.language)?;
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
-                writeln!(f, "VALUE \"{}\", \"{}\"", k, v)?;
+                writeln!(f, "VALUE \"{}\", \"{}\"", k, v.replace("\"", "\"\""))?;
             }
         }
         writeln!(f, "}}\n}}")?;
