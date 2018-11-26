@@ -369,7 +369,8 @@ impl WindowsResource {
         writeln!(f, "{{\nBLOCK \"{:04x}04b0\"\n{{", self.language)?;
         for (k, v) in self.properties.iter() {
             if !v.is_empty() {
-                writeln!(f, "VALUE \"{}\", \"{}\"", k, v.replace("\"", "\"\""))?;
+                writeln!(f, "VALUE \"{}\", \"{}\"",
+                         escape_string(k), escape_string(v))?;
             }
         }
         writeln!(f, "}}\n}}")?;
@@ -377,19 +378,19 @@ impl WindowsResource {
         writeln!(f, "BLOCK \"VarFileInfo\" {{")?;
         writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
         writeln!(f, "}}\n}}")?;
-        if self.icon.is_some() {
-            writeln!(f, "1 ICON \"{}\"", self.icon.as_ref().unwrap())?;
+        if let Some(ref icon) = self.icon {
+            writeln!(f, "1 ICON \"{}\"", escape_string(icon))?;
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
             if let Some(manf) = self.manifest.as_ref() {
                 writeln!(f, "{} 24", e)?;
                 writeln!(f, "{{")?;
                 for line in manf.lines() {
-                    writeln!(f, "\"{}\"", line.replace("\"", "\"\"").trim())?;
+                    writeln!(f, "\"{}\"", escape_string(line.trim()))?;
                 }
                 writeln!(f, "}}")?;
             } else if let Some(manf) = self.manifest_file.as_ref() {
-                writeln!(f, "{} 24 \"{}\"", e, manf)?;
+                writeln!(f, "{} 24 \"{}\"", e, escape_string(manf))?;
             }
         }
         Ok(())
@@ -531,7 +532,7 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
                 .skip(line.find("REG_SZ").unwrap() + 6)
                 .skip_while(|c| c.is_whitespace())
                 .collect();
-            
+
             let p = PathBuf::from(&kit);
             let rc = if cfg!(target_arch = "x86_64") {
                 p.join(r"bin\x64\rc.exe")
@@ -596,4 +597,33 @@ fn parse_cargo_toml(props: &mut HashMap<String, String>) -> io::Result<()> {
         println!("TOML parsing error")
     }
     Ok(())
+}
+
+fn escape_string(string: &str) -> String {
+    let mut escaped = String::new();
+    for chr in string.chars() {
+        // In quoted RC strings, double-quotes are escaped by using two
+        // consecutive double-quotes.  Other characters are escaped in the
+        // usual C way using backslashes.
+        if chr == '"' {
+            escaped.push_str("\"\"");
+        } else {
+            escaped.extend(chr.escape_default());
+        }
+    }
+    escaped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::escape_string;
+
+    #[test]
+    fn string_escaping() {
+        assert_eq!(&escape_string(""), "");
+        assert_eq!(&escape_string("foo"), "foo");
+        assert_eq!(&escape_string("\"Hello\""), "\"\"Hello\"\"");
+        assert_eq!(&escape_string("C:\\Program Files\\Foobar"),
+                   "C:\\\\Program Files\\\\Foobar");
+    }
 }
