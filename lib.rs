@@ -519,6 +519,7 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
     let output = process::Command::new("reg")
         .arg("query")
         .arg(r"HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots")
+        .arg("/reg:32")
         .output()?;
 
     let lines = String::from_utf8(output.stdout)
