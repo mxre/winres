@@ -291,9 +291,18 @@ impl WindowsResource {
     ///
     /// This icon need to be in `ico` format. The filename can be absolute
     /// or relative to the projects root.
-    pub fn set_icon<'a>(&mut self, path: &'a str, icon_id: Option<&'a str>) -> &mut Self {
+    pub fn set_icon<'a>(&mut self, path: &'a str) -> &mut Self {
         self.icon = Some(path.to_string());
-        self.icon_id = icon_id.map(|s| s.to_string());
+        self
+    }
+
+    /// Set an icon filename and icon id
+    ///
+    /// This icon need to be in `ico` format. The filename can be absolute
+    /// or relative to the projects root.
+    pub fn set_icon_with_id<'a>(&mut self, path: &'a str, icon_id: &'a str) -> &mut Self {
+        self.icon = Some(path.to_string());
+        self.icon_id = Some(icon_id.to_string());
         self
     }
 
@@ -382,11 +391,7 @@ impl WindowsResource {
         writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
         writeln!(f, "}}\n}}")?;
         if let Some(ref icon) = self.icon {
-            let name_id = if let Some(s) = &self.icon_id {
-                s
-            } else {
-                "1"
-            };
+            let name_id = self.icon_id.as_ref().map(String::as_str).unwrap_or("1");
             writeln!(f, "{} ICON \"{}\"", escape_string(name_id), escape_string(icon))?;
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
