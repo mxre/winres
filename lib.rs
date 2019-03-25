@@ -84,6 +84,7 @@ pub struct WindowsResource {
     properties: HashMap<String, String>,
     version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
+    icon_id: Option<String>,
     icon: Option<String>,
     language: u16,
     manifest: Option<String>,
@@ -178,6 +179,7 @@ impl WindowsResource {
             properties: props,
             version_info: ver,
             rc_file: None,
+            icon_id: None,
             icon: None,
             language: 0,
             manifest: None,
@@ -294,6 +296,16 @@ impl WindowsResource {
         self
     }
 
+    /// Set an icon filename and icon id
+    ///
+    /// This icon need to be in `ico` format. The filename can be absolute
+    /// or relative to the projects root.
+    pub fn set_icon_with_id<'a>(&mut self, path: &'a str, icon_id: &'a str) -> &mut Self {
+        self.icon = Some(path.to_string());
+        self.icon_id = Some(icon_id.to_string());
+        self
+    }
+
     /// Set a version info struct property
     /// Currently we only support numeric values; you have to look them up.
     pub fn set_version_info(&mut self, field: VersionInfo, value: u64) -> &mut Self {
@@ -379,7 +391,8 @@ impl WindowsResource {
         writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
         writeln!(f, "}}\n}}")?;
         if let Some(ref icon) = self.icon {
-            writeln!(f, "1 ICON \"{}\"", escape_string(icon))?;
+            let name_id = self.icon_id.as_ref().map(String::as_str).unwrap_or("1");
+            writeln!(f, "{} ICON \"{}\"", escape_string(name_id), escape_string(icon))?;
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
             if let Some(manf) = self.manifest.as_ref() {
