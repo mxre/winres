@@ -460,7 +460,7 @@ impl WindowsResource {
         }
 
         let libname = PathBuf::from(output_dir).join("libresource.a");
-        let ar_path = self.windres_path.as_ref().map_or("ar.exe", String::as_str);
+        let ar_path = self.ar_path.as_ref().map_or("ar.exe", String::as_str);
         let status = process::Command::new(ar_path)
             .current_dir(&self.toolkit_path)
             .arg("rsc")
