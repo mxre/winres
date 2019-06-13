@@ -90,6 +90,8 @@ pub struct WindowsResource {
     manifest: Option<String>,
     manifest_file: Option<String>,
     output_directory: String,
+    windres_path: Option<String>,
+    ar_path: Option<String>,
 }
 
 impl WindowsResource {
@@ -185,6 +187,8 @@ impl WindowsResource {
             manifest: None,
             manifest_file: None,
             output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
+            windres_path: None,
+            ar_path: None,
         }
     }
 
@@ -352,6 +356,18 @@ impl WindowsResource {
         self
     }
 
+    /// Set the path to the windres executable.
+    pub fn set_windres_path(&mut self, path: &str) -> &mut Self {
+        self.windres_path = Some(path.to_string());
+        self
+    }
+
+    /// Set the path to the ar executable.
+    pub fn set_ar_path(&mut self, path: &str) -> &mut Self {
+        self.ar_path = Some(path.to_string());
+        self
+    }
+
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = try!(fs::File::create(path));
@@ -432,7 +448,8 @@ impl WindowsResource {
     fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let output = PathBuf::from(output_dir).join("resource.o");
         let input = PathBuf::from(input);
-        let status = process::Command::new("windres.exe")
+        let windres_path = self.windres_path.as_ref().map_or("windres.exe", String::as_str);
+        let status = process::Command::new(windres_path)
             .current_dir(&self.toolkit_path)
             .arg(format!("-I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             .arg(format!("{}", input.display()))
@@ -443,7 +460,8 @@ impl WindowsResource {
         }
 
         let libname = PathBuf::from(output_dir).join("libresource.a");
-        let status = process::Command::new("ar.exe")
+        let ar_path = self.ar_path.as_ref().map_or("ar.exe", String::as_str);
+        let status = process::Command::new(ar_path)
             .current_dir(&self.toolkit_path)
             .arg("rsc")
             .arg(format!("{}", libname.display()))
