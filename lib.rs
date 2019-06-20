@@ -637,11 +637,15 @@ fn escape_string(string: &str) -> String {
         // In quoted RC strings, double-quotes are escaped by using two
         // consecutive double-quotes.  Other characters are escaped in the
         // usual C way using backslashes.
-        if chr == '"' {
-            escaped.push_str("\"\"");
-        } else {
-            escaped.extend(chr.escape_default());
-        }
+        match chr {
+            '"' => escaped.push_str("\"\""),
+            '\'' => escaped.push_str("\\'"),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\t' => escaped.push_str("\\t"),
+            '\r' => escaped.push_str("\\r"),
+            _ => escaped.push(chr),
+        };
     }
     escaped
 }
