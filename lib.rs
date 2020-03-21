@@ -79,13 +79,18 @@ pub enum VersionInfo {
 }
 
 #[derive(Debug)]
+struct Icon {
+    path: String,
+    name_id: String,
+}
+
+#[derive(Debug)]
 pub struct WindowsResource {
     toolkit_path: PathBuf,
     properties: HashMap<String, String>,
     version_info: HashMap<VersionInfo, u64>,
     rc_file: Option<String>,
-    icon_id: Option<String>,
-    icon: Option<String>,
+    icons: Vec<Icon>,
     language: u16,
     manifest: Option<String>,
     manifest_file: Option<String>,
@@ -181,8 +186,7 @@ impl WindowsResource {
             properties: props,
             version_info: ver,
             rc_file: None,
-            icon_id: None,
-            icon: None,
+            icons: Vec::new(),
             language: 0,
             manifest: None,
             manifest_file: None,
@@ -291,22 +295,68 @@ impl WindowsResource {
         self
     }
 
-    /// Set an icon filename
+    /// Add an icon with nameID `1`.
     ///
     /// This icon need to be in `ico` format. The filename can be absolute
     /// or relative to the projects root.
+    ///
+    /// Equivalent to `set_icon_with_id(path, "1")`.
     pub fn set_icon<'a>(&mut self, path: &'a str) -> &mut Self {
-        self.icon = Some(path.to_string());
-        self
+        self.set_icon_with_id(path, "1")
     }
 
-    /// Set an icon filename and icon id
+    /// Add an icon with the specified name ID.
     ///
-    /// This icon need to be in `ico` format. The filename can be absolute
-    /// or relative to the projects root.
-    pub fn set_icon_with_id<'a>(&mut self, path: &'a str, icon_id: &'a str) -> &mut Self {
-        self.icon = Some(path.to_string());
-        self.icon_id = Some(icon_id.to_string());
+    /// This icon need to be in `ico` format. The path can be absolute or
+    /// relative to the projects root.
+    ///
+    /// ## Name ID and Icon Loading
+    ///
+    /// The name ID can be (the string representation of) a 16-bit unsigned
+    /// integer, or some other string.
+    ///
+    /// You should not add multiple icons with the same name ID. It will result
+    /// in a build failure.
+    ///
+    /// When the name ID is an integer, the icon can be loaded at runtime with
+    ///
+    /// ```ignore
+    /// LoadIconW(h_instance, MAKEINTRESOURCEW(name_id_as_integer))
+    /// ```
+    ///
+    /// Otherwise, it can be loaded with
+    ///
+    /// ```ignore
+    /// LoadIconW(h_instance, name_id_as_wide_c_str_as_ptr)
+    /// ```
+    ///
+    /// Where `h_instance` is the module handle of the current executable
+    /// ([`GetModuleHandleW`](https://docs.rs/winapi/0.3.8/winapi/um/libloaderapi/fn.GetModuleHandleW.html)`(null())`),
+    /// [`LoadIconW`](https://docs.rs/winapi/0.3.8/winapi/um/winuser/fn.LoadIconW.html)
+    /// and
+    /// [`MAKEINTRESOURCEW`](https://docs.rs/winapi/0.3.8/winapi/um/winuser/fn.MAKEINTRESOURCEW.html)
+    /// are defined in winapi.
+    ///
+    /// ## Multiple Icons, Which One is Application Icon?
+    ///
+    /// When you have multiple icons, it's a bit complicated which one will be
+    /// chosen as the application icon:
+    /// <https://docs.microsoft.com/en-us/previous-versions/ms997538(v=msdn.10)?redirectedfrom=MSDN#choosing-an-icon>.
+    ///
+    /// To keep things simple, we recommand you use only 16-bit unsigned integer
+    /// name IDs, and add the application icon first with the lowest id:
+    ///
+    /// ```nocheck
+    /// res.set_icon("icon.ico") // This is application icon.
+    ///    .set_icon_with_id("icon2.icon", "2")
+    ///    .set_icon_with_id("icon3.icon", "3")
+    ///    // ...
+    /// ```
+    pub fn set_icon_with_id<'a>(&mut self, path: &'a str, name_id: &'a str) -> &mut Self {
+        self.icons.push(Icon {
+            path: path.into(),
+            name_id: name_id.into(),
+        });
         self
     }
 
@@ -406,9 +456,8 @@ impl WindowsResource {
         writeln!(f, "BLOCK \"VarFileInfo\" {{")?;
         writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
         writeln!(f, "}}\n}}")?;
-        if let Some(ref icon) = self.icon {
-            let name_id = self.icon_id.as_ref().map(String::as_str).unwrap_or("1");
-            writeln!(f, "{} ICON \"{}\"", escape_string(name_id), escape_string(icon))?;
+        for icon in &self.icons {
+            writeln!(f, "{} ICON \"{}\"", escape_string(&icon.name_id), escape_string(&icon.path))?;
         }
         if let Some(e) = self.version_info.get(&VersionInfo::FILETYPE) {
             if let Some(manf) = self.manifest.as_ref() {
