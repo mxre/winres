@@ -92,6 +92,7 @@ pub struct WindowsResource {
     output_directory: String,
     windres_path: Option<String>,
     ar_path: Option<String>,
+    append_rc_content: String,
 }
 
 impl WindowsResource {
@@ -189,6 +190,7 @@ impl WindowsResource {
             output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
             windres_path: None,
             ar_path: None,
+            append_rc_content: String::new(),
         }
     }
 
@@ -422,6 +424,7 @@ impl WindowsResource {
                 writeln!(f, "{} 24 \"{}\"", e, escape_string(manf))?;
             }
         }
+        write!(f, "{}", self.append_rc_content)?;
         Ok(())
     }
 
@@ -432,6 +435,44 @@ impl WindowsResource {
     /// the compiler. You can use this function to write a resource file yourself.
     pub fn set_resource_file<'a>(&mut self, path: &'a str) -> &mut Self {
         self.rc_file = Some(path.to_string());
+        self
+    }
+
+    /// Append an additional snippet to the generated rc file.
+    ///
+    /// # Example
+    ///
+    /// Define a menu resource:
+    ///
+    /// ```rust
+    /// # extern crate winres;
+    /// # if cfg!(target_os = "windows") {
+    ///     let mut res = winres::WindowsResource::new();
+    ///     res.append_rc_content(r##"sample MENU
+    /// {
+    ///     MENUITEM "&Soup", 100
+    ///     MENUITEM "S&alad", 101
+    ///     POPUP "&Entree"
+    ///     {
+    ///          MENUITEM "&Fish", 200
+    ///          MENUITEM "&Chicken", 201, CHECKED
+    ///          POPUP "&Beef"
+    ///          {
+    ///               MENUITEM "&Steak", 301
+    ///               MENUITEM "&Prime Rib", 302
+    ///          }
+    ///     }
+    ///     MENUITEM "&Dessert", 103
+    /// }"##);
+    /// #    res.compile()?;
+    /// # }
+    /// # Ok::<_, std::io::Error>(())
+    /// ```
+    pub fn append_rc_content<'a>(&mut self, content: &'a str) -> &mut Self {
+        if !(self.append_rc_content.ends_with('\n') || self.append_rc_content.is_empty()) {
+            self.append_rc_content.push('\n');
+        }
+        self.append_rc_content.push_str(content);
         self
     }
 
