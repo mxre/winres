@@ -370,7 +370,7 @@ impl WindowsResource {
 
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let mut f = try!(fs::File::create(path));
+        let mut f = fs::File::create(path)?;
         // we don't need to include this, we use constants instead of macro names
         // try!(write!(f, "#include <winver.h>\n"));
 
@@ -444,8 +444,7 @@ impl WindowsResource {
         self
     }
 
-    #[cfg(target_env = "gnu")]
-    fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
+    fn compile_with_toolkit_gnu<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let output = PathBuf::from(output_dir).join("resource.o");
         let input = PathBuf::from(input);
         let windres_path = self.windres_path.as_ref().map_or("windres.exe", String::as_str);
@@ -498,13 +497,16 @@ impl WindowsResource {
         } else {
             rc.to_str().unwrap().to_string()
         };
-        self.compile_with_toolkit(rc.as_str(), &self.output_directory)?;
 
-        Ok(())
+        let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap();
+        match target_env.as_str() {
+            "gnu" => self.compile_with_toolkit_gnu(rc.as_str(), &self.output_directory),
+            "msvc" => self.compile_with_toolkit_msvc(rc.as_str(), &self.output_directory),
+            _ => Err(io::Error::new(io::ErrorKind::Other, "Can only compile resource file when target_env is \"gnu\" or \"msvc\"")),
+        }
     }
 
-    #[cfg(target_env = "msvc")]
-    fn compile_with_toolkit<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
+    fn compile_with_toolkit_msvc<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let rc_exe = PathBuf::from(&self.toolkit_path).join("rc.exe");
         let rc_exe = if !rc_exe.exists() {
             if cfg!(target_arch = "x86_64") {
@@ -536,11 +538,6 @@ impl WindowsResource {
         println!("cargo:rustc-link-search=native={}", output_dir);
         println!("cargo:rustc-link-lib=dylib={}", "resource");
         Ok(())
-    }
-
-    #[cfg(not(any(target_env = "gnu", target_env = "msvc")))]
-    fn compile_with_toolkit<'a>(&self, _input: &'a str, _output_dir: &'a str) -> io::Result<()> {
-        Err(io::Error::new(io::ErrorKind::Other, "Can only compile resource file when target_env is \"gnu\" or \"msvc\""))
     }
 }
 
