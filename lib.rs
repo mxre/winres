@@ -370,7 +370,7 @@ impl WindowsResource {
 
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let mut f = try!(fs::File::create(path));
+        let mut f = fs::File::create(path)?;
         // we don't need to include this, we use constants instead of macro names
         // try!(write!(f, "#include <winver.h>\n"));
 
@@ -554,7 +554,7 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
         .output()?;
 
     let lines = String::from_utf8(output.stdout)
-        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.description())))?;
+        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
     let mut kits: Vec<PathBuf> = Vec::new();
     let mut lines: Vec<&str> = lines.lines().collect();
     lines.reverse();
