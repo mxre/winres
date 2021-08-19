@@ -52,7 +52,6 @@ use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
 use std::fs;
-use std::error::Error;
 
 extern crate toml;
 
