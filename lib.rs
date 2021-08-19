@@ -143,24 +143,24 @@ impl WindowsResource {
 
         props.insert(
             "FileVersion".to_string(),
-            env::var("CARGO_PKG_VERSION").unwrap().to_string(),
+            env::var("CARGO_PKG_VERSION").unwrap(),
         );
         props.insert(
             "ProductVersion".to_string(),
-            env::var("CARGO_PKG_VERSION").unwrap().to_string(),
+            env::var("CARGO_PKG_VERSION").unwrap(),
         );
         props.insert(
             "ProductName".to_string(),
-            env::var("CARGO_PKG_NAME").unwrap().to_string(),
+            env::var("CARGO_PKG_NAME").unwrap(),
         );
         props.insert(
             "FileDescription".to_string(),
-            env::var("CARGO_PKG_DESCRIPTION").unwrap().to_string(),
+            env::var("CARGO_PKG_DESCRIPTION").unwrap(),
         );
 
         parse_cargo_toml(&mut props).unwrap();
 
-        let mut version = 0 as u64;
+        let mut version = 0_u64;
         version |= env::var("CARGO_PKG_VERSION_MAJOR")
             .unwrap()
             .parse()
@@ -204,7 +204,7 @@ impl WindowsResource {
             language: 0,
             manifest: None,
             manifest_file: None,
-            output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
+            output_directory: env::var("OUT_DIR").unwrap_or_else(|_| ".".to_string()),
             windres_path: None,
             ar_path: None,
         }
@@ -428,7 +428,7 @@ impl WindowsResource {
         writeln!(f, "VALUE \"Translation\", {:#x}, 0x04b0", self.language)?;
         writeln!(f, "}}\n}}")?;
         if let Some(ref icon) = self.icon {
-            let name_id = self.icon_id.as_ref().map(String::as_str).unwrap_or("1");
+            let name_id = self.icon_id.as_deref().unwrap_or("1");
             writeln!(
                 f,
                 "{} ICON \"{}\"",
@@ -507,7 +507,7 @@ impl WindowsResource {
         }
 
         println!("cargo:rustc-link-search=native={}", output_dir);
-        println!("cargo:rustc-link-lib=static={}", "resource");
+        println!("cargo:rustc-link-lib=static=resource");
 
         Ok(())
     }
@@ -577,7 +577,7 @@ impl WindowsResource {
         }
 
         println!("cargo:rustc-link-search=native={}", output_dir);
-        println!("cargo:rustc-link-lib=dylib={}", "resource");
+        println!("cargo:rustc-link-lib=dylib=resource");
         Ok(())
     }
 
@@ -587,6 +587,12 @@ impl WindowsResource {
             io::ErrorKind::Other,
             "Can only compile resource file when target_env is \"gnu\" or \"msvc\"",
         ))
+    }
+}
+
+impl Default for WindowsResource {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -600,7 +606,7 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
         .output()?;
 
     let lines = String::from_utf8(output.stdout)
-        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
     let mut kits: Vec<PathBuf> = Vec::new();
     let mut lines: Vec<&str> = lines.lines().collect();
     lines.reverse();
