@@ -552,6 +552,17 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
         .arg("/reg:32")
         .output()?;
 
+    if !output.status.success() {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!(
+                "Querying the registry failed with error message:\n{}",
+                String::from_utf8(output.stderr)
+                    .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.to_string())))?
+            ),
+        ));
+    }
+
     let lines = String::from_utf8(output.stdout)
         .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
     let mut kits: Vec<PathBuf> = Vec::new();
