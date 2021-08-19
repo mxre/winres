@@ -592,6 +592,13 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
             }
         }
     }
+    if kits.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Can not find Windows SDK",
+        ));
+    }
+
     Ok(kits)
 }
 
