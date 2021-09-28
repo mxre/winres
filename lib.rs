@@ -510,7 +510,7 @@ impl WindowsResource {
                 writeln!(f, "{} 24", e)?;
                 writeln!(f, "{{")?;
                 for line in manf.lines() {
-                    writeln!(f, "\"{}\"", escape_string(line.trim()))?;
+                    writeln!(f, "\" {} \"", escape_string(line.trim()))?;
                 }
                 writeln!(f, "}}")?;
             } else if let Some(manf) = self.manifest_file.as_ref() {
