@@ -163,7 +163,7 @@ impl WindowsResource {
         );
         props.insert(
             "FileDescription".to_string(),
-            env::var("CARGO_PKG_DESCRIPTION").unwrap(),
+            env::var("CARGO_PKG_NAME").unwrap(),
         );
 
         parse_cargo_toml(&mut props).unwrap();
