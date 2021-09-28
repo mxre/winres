@@ -849,10 +849,10 @@ mod tests {
     fn string_escaping() {
         assert_eq!(&escape_string(""), "");
         assert_eq!(&escape_string("foo"), "foo");
-        assert_eq!(&escape_string("\"Hello\""), "\"\"Hello\"\"");
+        assert_eq!(&escape_string(r#""Hello""#), r#"""Hello"""#);
         assert_eq!(
-            &escape_string("C:\\Program Files\\Foobar"),
-            "C:\\\\Program Files\\\\Foobar"
+            &escape_string(r"C:\Program Files\Foobar"),
+            r"C:\\Program Files\\Foobar"
         );
     }
 
@@ -861,11 +861,11 @@ mod tests {
         use std::path::Path;
 
         let res = win_sdk_inlcude_root(Path::new(
-            r#"C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\rc.exe"#,
+            r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\rc.exe",
         ));
         assert_eq!(
             res.as_os_str(),
-            r#"C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0"#
+            r"C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0"
         );
     }
 
@@ -874,11 +874,11 @@ mod tests {
         use std::path::Path;
 
         let res = win_sdk_inlcude_root(Path::new(
-            r#"C:\Program Files (x86)\Windows Kits\8.1\bin\x86\rc.exe"#,
+            r"C:\Program Files (x86)\Windows Kits\8.1\bin\x86\rc.exe",
         ));
         assert_eq!(
             res.as_os_str(),
-            r#"C:\Program Files (x86)\Windows Kits\8.1\Include"#
+            r"C:\Program Files (x86)\Windows Kits\8.1\Include"
         );
     }
 }
