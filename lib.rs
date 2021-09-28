@@ -52,7 +52,6 @@ use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
 use std::fs;
-use std::error::Error;
 
 extern crate toml;
 
@@ -90,8 +89,8 @@ pub struct WindowsResource {
     manifest: Option<String>,
     manifest_file: Option<String>,
     output_directory: String,
-    windres_path: Option<String>,
-    ar_path: Option<String>,
+    windres_path: String,
+    ar_path: String,
 }
 
 impl WindowsResource {
@@ -172,8 +171,10 @@ impl WindowsResource {
                 Ok(mut v) => v.pop().unwrap(),
                 Err(_) => PathBuf::new(),
             }
-        } else {
+        } else if cfg!(windows) {
             PathBuf::from("\\")
+        } else {
+            PathBuf::from("/")
         };
 
         WindowsResource {
@@ -187,8 +188,16 @@ impl WindowsResource {
             manifest: None,
             manifest_file: None,
             output_directory: env::var("OUT_DIR").unwrap_or(".".to_string()),
-            windres_path: None,
-            ar_path: None,
+
+            #[cfg(windows)]
+            windres_path: "windres.exe".to_string(),
+            #[cfg(unix)]
+            windres_path: "windres".to_string(),
+
+            #[cfg(windows)]
+            ar_path: "ar.exe".to_string(),
+            #[cfg(unix)]
+            ar_path: "ar".to_string(),
         }
     }
 
@@ -358,13 +367,13 @@ impl WindowsResource {
 
     /// Set the path to the windres executable.
     pub fn set_windres_path(&mut self, path: &str) -> &mut Self {
-        self.windres_path = Some(path.to_string());
+        self.windres_path = path.to_string();
         self
     }
 
     /// Set the path to the ar executable.
     pub fn set_ar_path(&mut self, path: &str) -> &mut Self {
-        self.ar_path = Some(path.to_string());
+        self.ar_path = path.to_string();
         self
     }
 
@@ -447,8 +456,8 @@ impl WindowsResource {
     fn compile_with_toolkit_gnu<'a>(&self, input: &'a str, output_dir: &'a str) -> io::Result<()> {
         let output = PathBuf::from(output_dir).join("resource.o");
         let input = PathBuf::from(input);
-        let windres_path = self.windres_path.as_ref().map_or("windres.exe", String::as_str);
-        let status = process::Command::new(windres_path)
+        println!("{:?} {:?}", self.windres_path, self.toolkit_path);
+        let status = process::Command::new(&self.windres_path)
             .current_dir(&self.toolkit_path)
             .arg(format!("-I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
             .arg(format!("{}", input.display()))
@@ -459,8 +468,7 @@ impl WindowsResource {
         }
 
         let libname = PathBuf::from(output_dir).join("libresource.a");
-        let ar_path = self.ar_path.as_ref().map_or("ar.exe", String::as_str);
-        let status = process::Command::new(ar_path)
+        let status = process::Command::new(&self.ar_path)
             .current_dir(&self.toolkit_path)
             .arg("rsc")
             .arg(format!("{}", libname.display()))
@@ -551,7 +559,7 @@ fn get_sdk() -> io::Result<Vec<PathBuf>> {
         .output()?;
 
     let lines = String::from_utf8(output.stdout)
-        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.description())))?;
+        .or_else(|e| Err(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
     let mut kits: Vec<PathBuf> = Vec::new();
     let mut lines: Vec<&str> = lines.lines().collect();
     lines.reverse();
