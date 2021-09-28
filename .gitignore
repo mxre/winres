@@ -1,7 +1,6 @@
 /.idea/
 /target/
 /example/target
-.editorconfig
 Cargo.lock
 *~
 *.bk
