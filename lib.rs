@@ -91,6 +91,7 @@ pub struct WindowsResource {
     output_directory: String,
     windres_path: String,
     ar_path: String,
+    add_toolkit_include: bool,
 }
 
 impl WindowsResource {
@@ -198,6 +199,8 @@ impl WindowsResource {
             ar_path: "ar.exe".to_string(),
             #[cfg(unix)]
             ar_path: "ar".to_string(),
+
+            add_toolkit_include: false
         }
     }
 
@@ -377,11 +380,15 @@ impl WindowsResource {
         self
     }
 
+    /// Set the path to the ar executable.
+    pub fn add_toolkit_include(&mut self, add: bool) -> &mut Self {
+        self.add_toolkit_include = add;
+        self
+    }
+
     /// Write a resource file with the set values
     pub fn write_resource_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = fs::File::create(path)?;
-        // we don't need to include this, we use constants instead of macro names
-        // try!(write!(f, "#include <winver.h>\n"));
 
         // use UTF8 as an encoding
         // this makes it easier since in rust all string are UTF8
@@ -525,18 +532,23 @@ impl WindowsResource {
         } else {
             rc_exe
         };
-        // let inc_win = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\um");
-        // let inc_shared = PathBuf::from(&self.toolkit_path).join("Include\\10.0.10586.0\\shared");
+        println!("Selected RC path: '{}'", rc_exe.display());
         let output = PathBuf::from(output_dir).join("resource.lib");
         let input = PathBuf::from(input);
-        let status = process::Command::new(rc_exe)
-            .arg(format!("/I{}", env::var("CARGO_MANIFEST_DIR").unwrap()))
-            //.arg(format!("/I{}", inc_shared.display()))
-            //.arg(format!("/I{}", inc_win.display()))
-            //.arg("/nologo")
-            .arg(format!("/fo{}", output.display()))
+        let mut command = process::Command::new(&rc_exe);
+        let command = command.arg(format!("/I{}", env::var("CARGO_MANIFEST_DIR").unwrap()));
+
+        if self.add_toolkit_include {
+            let root = win_sdk_inlcude_root(&rc_exe);
+            println!("Adding toolkit include: {}", root.display());
+            command.arg(format!("/I{}", root.join("um").display()));
+            command.arg(format!("/I{}", root.join("shared").display()));
+        }
+
+        let status = command.arg(format!("/fo{}", output.display()))
             .arg(format!("{}", input.display()))
             .output()?;
+
         println!("RC Output:\n{}\n------", String::from_utf8_lossy(&status.stdout));
         println!("RC Error:\n{}\n------", String::from_utf8_lossy(&status.stderr));
         if !status.status.success() {
@@ -673,9 +685,31 @@ fn escape_string(string: &str) -> String {
     escaped
 }
 
+fn win_sdk_inlcude_root(path:&Path) -> PathBuf
+{
+    let mut tools_path = PathBuf::new();
+    let mut iter = path.iter();
+    while let Some(p) = iter.next() {
+        if p == "bin" {
+            let version = iter.next().unwrap();            
+            tools_path.push("Include");
+            if version.to_string_lossy().starts_with("10.") {
+                tools_path.push(version);
+            }
+            break;
+        }
+        else {
+            tools_path.push(p);
+        }
+    }
+
+    tools_path
+}
+
 #[cfg(test)]
 mod tests {
     use super::escape_string;
+    use super::win_sdk_inlcude_root;
 
     #[test]
     fn string_escaping() {
@@ -684,5 +718,21 @@ mod tests {
         assert_eq!(&escape_string("\"Hello\""), "\"\"Hello\"\"");
         assert_eq!(&escape_string("C:\\Program Files\\Foobar"),
                    "C:\\\\Program Files\\\\Foobar");
+    }
+
+    #[test]
+    fn toolkit_include_win10() {
+        use std::path::Path;
+
+        let res = win_sdk_inlcude_root(Path::new(r#"C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\rc.exe"#));
+        assert_eq!(res.as_os_str(), r#"C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0"#);
+    }
+
+    #[test]
+    fn toolkit_include_win8() {
+        use std::path::Path;
+
+        let res = win_sdk_inlcude_root(Path::new(r#"C:\Program Files (x86)\Windows Kits\8.1\bin\x86\rc.exe"#));
+        assert_eq!(res.as_os_str(), r#"C:\Program Files (x86)\Windows Kits\8.1\Include"#);
     }
 }
