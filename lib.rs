@@ -204,6 +204,42 @@ impl WindowsResource {
             PathBuf::from("/")
         };
 
+        let prefix = if let Ok(cross) = env::var("CROSS_COMPILE") {
+            cross
+        } else if env::var_os("HOST").unwrap() != env::var_os("TARGET").unwrap()
+            && cfg!(not(target_env = "msvc"))
+        {
+            match env::var("TARGET").unwrap().as_str() {
+                "x86_64-pc-windows-gnu" => "x86_64-w64-mingw32-",
+                "i686-pc-windows-gnu" => "i686-w64-mingw32-",
+                "i586-pc-windows-gnu" => "i586-w64-mingw32-",
+                // MinGW supports ARM64 only with an LLVM-based toolchain
+                // (x86 users might also be using LLVM, but we can't tell that from the Rust target...)
+                "aarch64-pc-windows-gnu" => "llvm-",
+                // fail safe
+                _ => {
+                    println!(
+                        "cargo:warning=unknown Windows target used for cross-compilation; \
+                              invoking unprefixed windres"
+                    );
+                    ""
+                }
+            }
+            .into()
+        } else {
+            "".into()
+        };
+        let windres_path = if let Ok(windres) = env::var("WINDRES") {
+            windres
+        } else {
+            format!("{}windres", prefix)
+        };
+        let ar_path = if let Ok(ar) = env::var("AR") {
+            ar
+        } else {
+            format!("{}ar", prefix)
+        };
+
         WindowsResource {
             toolkit_path: sdk,
             properties: props,
@@ -214,17 +250,8 @@ impl WindowsResource {
             manifest: None,
             manifest_file: None,
             output_directory: env::var("OUT_DIR").unwrap_or_else(|_| ".".to_string()),
-
-            #[cfg(windows)]
-            windres_path: "windres.exe".to_string(),
-            #[cfg(unix)]
-            windres_path: "windres".to_string(),
-
-            #[cfg(windows)]
-            ar_path: "ar.exe".to_string(),
-            #[cfg(unix)]
-            ar_path: "ar".to_string(),
-
+            windres_path,
+            ar_path,
             add_toolkit_include: false,
             append_rc_content: String::new(),
         }
