@@ -329,14 +329,18 @@ impl WindowsResource {
         self
     }
 
-    /// Add an icon with nameID `1`.
+    /// Add an icon with nameID `32512`.
     ///
-    /// This icon need to be in `ico` format. The filename can be absolute
+    /// This icon needs to be in `ico` format. The filename can be absolute
     /// or relative to the projects root.
     ///
-    /// Equivalent to `set_icon_with_id(path, "1")`.
+    /// Equivalent to `set_icon_with_id(path, "32512")`.
+    ///
+    /// Windows uses `32512` as the default icon ID. See
+    /// [here](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadicona)
+    /// for Windows docs demonstrating this.
     pub fn set_icon<'a>(&mut self, path: &'a str) -> &mut Self {
-        self.set_icon_with_id(path, "1")
+        self.set_icon_with_id(path, "32512")
     }
 
     /// Add an icon with the specified name ID.
