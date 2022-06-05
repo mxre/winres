@@ -609,7 +609,12 @@ impl WindowsResource {
         }
 
         println!("cargo:rustc-link-search=native={}", output_dir);
-        println!("cargo:rustc-link-lib=static=resource");
+
+        if version_check::is_min_version("1.61.0").unwrap_or(true) {
+            println!("cargo:rustc-link-lib=static:+whole-archive=resource");
+        } else {
+            println!("cargo:rustc-link-lib=static=resource");
+        }
 
         Ok(())
     }
