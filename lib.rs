@@ -162,7 +162,7 @@ impl WindowsResource {
             env::var("CARGO_PKG_NAME").unwrap(),
         );
         match env::var("CARGO_PKG_DESCRIPTION") {
-            Ok(var) => props.insert("FileDescription".to_string(), var),
+            Ok(var) => { props.insert("FileDescription".to_string(), var) },
             Err(_) => (),
         };
 
