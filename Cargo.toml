@@ -11,7 +11,7 @@ documentation= "https://docs.rs/winres/*/winres/"
 path = "lib.rs"
 
 [dependencies]
-toml = "0.5"
+toml = "0.7"
 
 [dev-dependencies]
 # used for tests
