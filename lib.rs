@@ -429,7 +429,7 @@ impl WindowsResource {
     }
 
     /// Some as [`set_manifest()`] but a filename can be provided and
-    /// file is included by the resource compieler itself.
+    /// file is included by the resource compiler itself.
     /// This method works the same way as [`set_icon()`]
     ///
     /// [`set_manifest()`]: #method.set_manifest
